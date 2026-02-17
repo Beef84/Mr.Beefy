@@ -1,0 +1,96 @@
+name: Sync Wiki to Knowledge
+
+on:
+  schedule:
+    - cron: "0 0 * * *"   # every day at midnight UTC
+  workflow_dispatch:       # optional manual run button
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout wiki repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          pip install markdown beautifulsoup4
+
+      - name: Rebuild knowledge directory
+        run: |
+          rm -rf knowledge
+          mkdir knowledge
+
+          python3 << 'EOF'
+          import os
+
+          WIKI_DIR = "wiki"
+          OUT_DIR = "knowledge"
+
+          def chunk_text(text, max_chars=1200):
+              chunks = []
+              current = []
+              length = 0
+
+              for line in text.split("\n"):
+                  if length + len(line) > max_chars:
+                      chunks.append("\n".join(current))
+                      current = []
+                      length = 0
+                  current.append(line)
+                  length += len(line)
+
+              if current:
+                  chunks.append("\n".join(current))
+
+              return chunks
+
+          for filename in os.listdir(WIKI_DIR):
+              if not filename.endswith(".md"):
+                  continue
+              if filename == "_Sidebar.md":
+                  continue
+
+              page_name = filename.replace(".md", "").lower().replace(" ", "-")
+              page_path = os.path.join(WIKI_DIR, filename)
+
+              with open(page_path, "r", encoding="utf-8") as f:
+                  content = f.read()
+
+              chunks = chunk_text(content)
+
+              page_dir = os.path.join(OUT_DIR, page_name)
+              os.makedirs(page_dir, exist_ok=True)
+
+              for i, chunk in enumerate(chunks, start=1):
+                  out_path = os.path.join(page_dir, f"chunk-{i:03}.md")
+                  with open(out_path, "w", encoding="utf-8") as out:
+                      out.write(chunk)
+
+          EOF
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "Sync wiki → knowledge"
+          title: "Automated: Sync wiki → knowledge"
+          body: |
+            This PR updates the `/knowledge` directory based on the latest wiki content.
+            - Generated automatically
+            - Do not edit `/knowledge` manually
+          branch: automated/wiki-sync
+          delete-branch: true
