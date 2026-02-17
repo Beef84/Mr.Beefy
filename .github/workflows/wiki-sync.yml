@@ -1,5 +1,9 @@
 name: Sync Wiki to Knowledge
 
+permissions:
+  contents: write
+  pull-requests: write
+
 on:
   schedule:
     - cron: "0 0 * * *"   # every day at midnight UTC
