@@ -92,14 +92,6 @@ ai-journey-2026/
 │   ├── design-decisions.md
 │   └── agent-philosophy.md
 │
-├── foundations/        # ML fundamentals, PyTorch, multimodal basics
-├── distributed/        # (Optional) Notes on DDP, FSDP, DeepSpeed
-├── optimization/       # (Optional) Notes on ONNX, TensorRT, quantization
-├── infra-notes/        # MLOps, monitoring, registries, feature stores
-├── projects/           # Additional experiments and demos
-│
-├── notes/              # General technical notes
-│
 └── README.md           # This file
 ```
 
