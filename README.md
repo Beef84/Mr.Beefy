@@ -1,94 +1,139 @@
-# **AI Infrastructure Engineering Journey 2026**
-*A structured, certificate‑driven roadmap documenting my transition from Senior DevOps Engineer to AI Infrastructure Engineer by March 15, 2026.*
+# **AI Infrastructure Engineering Journey 2026**  
+*A practical, project‑driven roadmap documenting my transition from Senior DevOps Engineer to AI Infrastructure Engineer — centered around building a real, public-facing AI system on AWS.*
 
-Over the last 13 years, I’ve built my career around **DevOps engineering, cloud automation, and the Microsoft ecosystem**, with deep experience in:
+For more than a decade, my work has focused on **DevOps engineering, cloud automation, and backend systems**, with deep experience in:
 
-- .NET application development  
 - CI/CD pipelines and release automation  
-- Containerization (Docker, Kubernetes, WSL2)  
 - Infrastructure‑as‑Code  
-- Cross‑platform systems engineering  
-- Designing reproducible, scalable environments for experimentation and deployment  
+- .NET and distributed backend engineering  
+- Containerization and cloud-native workflows  
+- Designing reproducible, scalable environments  
 
-In 2025, I expanded my work into **GPU‑based model workflows**, including MusicGen, AudioCraft, Ace‑Step, and multimodal systems inside containerized environments. That experience clarified something important: **AI engineering is the natural next step in my career**.
+In 2025, I expanded into **GPU‑accelerated model workflows** and multimodal experimentation. That work made something clear:  
+**AI infrastructure engineering is the natural evolution of my DevOps background.**
 
-2026 is the year I formalize that transition.
-
-This repository documents my **90‑day transformation** into a production‑ready **AI Infrastructure Engineer**, with a focus on the highest‑value skills in the industry:
-
-- Distributed training (DDP, FSDP, DeepSpeed)  
-- Model optimization (ONNX, TensorRT, quantization)  
-- GPU‑aware orchestration (Kubernetes + NVIDIA stack)  
-- MLOps pipelines and model registries  
-- Multimodal systems (audio, video, text)  
-- End‑to‑end AI platform engineering  
-
-The goal is to be fully interview‑ready for top‑tier AI engineering roles by **March 15, 2026**.
+This repository documents my journey to formalize that transition — not through theory, but through a **real, production-style AI system** that demonstrates the skills modern ML platform teams expect.
 
 ---
 
-## **📑 Roadmap Overview**
-This journey is broken into eight phases:
+# **🚀 Flagship Project: Public AWS Bedrock Agent**
 
-1. **Setup**  
-2. **ML Foundations**  
-3. **Distributed Training**  
-4. **Model Optimization**  
-5. **AI Infrastructure**  
-6. **Flagship Project**  
-7. **Multimodal Specialization**  
-8. **Interview Prep & Application Sprint**
+The centerpiece of this journey is a fully deployed, public-facing AI agent built on **AWS Bedrock**.  
+This agent:
 
-Each phase includes:
-- Daily tasks  
-- Certificate‑granting courses  
-- Benchmarks  
-- Code deliverables  
-- Documentation  
+- Lives inside a **single‑page web UI**  
+- Uses **Bedrock Agents** for orchestration  
+- Retrieves information from a **vector knowledge base**  
+- Learns from documentation stored in this repo under `/knowledge`  
+- Explains its own architecture, pricing, and design decisions  
+- Demonstrates real-world **ML engineering**, **DevOps**, and **cloud architecture** skills  
+- Is deployed end‑to‑end through **CI/CD pipelines**  
+
+This is not a toy demo — it’s a production‑style system designed to show employers how I think, build, automate, and operate AI infrastructure.
 
 ---
 
-## **📂 Repository Structure**
+# **🎯 What This Repository Demonstrates**
+
+This project focuses on the practical, high‑impact skills that matter in modern AI engineering roles:
+
+### **✔ Serverless AI Agents on AWS Bedrock**  
+Designing and deploying a public agent that employers can interact with directly.
+
+### **✔ Retrieval‑Augmented Generation (RAG)**  
+Using AWS Bedrock Knowledge Bases backed by S3 to ingest and embed documentation from `/knowledge`.
+
+### **✔ Cost‑Optimized Cloud Architecture**  
+Selecting efficient models, storage layers, and serverless components to keep a public agent affordable and reliable.
+
+### **✔ Infrastructure‑as‑Code for AI Systems**  
+Defining Bedrock Agents, Knowledge Bases, API Gateway, Lambda, S3, and CloudFront using IaC for reproducibility and clarity.
+
+### **✔ CI/CD Pipelines for AI + Infrastructure**  
+Automating deployment of:
+- the frontend (SPA),  
+- the backend (Lambda/API),  
+- and the infrastructure (IaC)  
+
+using GitHub Actions and AWS CodePipeline/CodeBuild.
+
+### **✔ Automated Knowledge Base Synchronization**  
+Every commit to `/knowledge` triggers a pipeline that syncs updated Markdown files to S3, enabling automatic re‑indexing.
+
+### **✔ Production‑Style Observability and Operations**  
+Logging, metrics, and basic safeguards for a public AI endpoint.
+
+### **✔ Self‑Documenting AI Architecture**  
+The agent can explain:
+- how it is built,  
+- why each AWS service was chosen,  
+- how much it costs to run,  
+- and how the CI/CD pipeline works  
+
+using the same knowledge base that powers its retrieval.
+
+This project is intentionally scoped to highlight **ML engineering**, **DevOps**, and **cloud architecture** — the intersection where modern AI infrastructure roles live.
+
+---
+
+# **📂 Repository Structure**
 ```
 ai-journey-2026/
 │
-├── foundations/        # PyTorch, audio, multimodal basics
-├── distributed/        # DDP, FSDP, DeepSpeed, profiling
-├── optimization/       # ONNX, TensorRT, quantization, vLLM, Triton
-├── infra/              # MLOps, K8s, monitoring, registries, feature stores
-├── projects/           # Flagship AI Platform + Multimodal Demo
+├── frontend/           # Single-page UI hosting the public agent
+├── backend/            # Lambda/API logic for Bedrock Agent Runtime
+├── infra/              # IaC for Bedrock Agent, KB, API Gateway, Lambda, S3, CloudFront
 │
-├── notes/              # Technical notes for each topic
+├── knowledge/          # Source files for the vector Knowledge Base
+│   ├── architecture.md
+│   ├── costs.md
+│   ├── cicd.md
+│   ├── model-selection.md
+│   ├── design-decisions.md
+│   └── agent-philosophy.md
+│
+├── foundations/        # ML fundamentals, PyTorch, multimodal basics
+├── distributed/        # (Optional) Notes on DDP, FSDP, DeepSpeed
+├── optimization/       # (Optional) Notes on ONNX, TensorRT, quantization
+├── infra-notes/        # MLOps, monitoring, registries, feature stores
+├── projects/           # Additional experiments and demos
+│
+├── notes/              # General technical notes
 │
 └── README.md           # This file
 ```
 
 ---
 
-## **🏆 Certificates Earned**
-This repo tracks all certificates earned along the way, including:
+# **🏆 Certificates Earned**
+This repo tracks all certificates earned along the AWS Machine Learning/Data Scientist Specialty path, including:
 
-- DeepLearning.AI short courses  
-- Hugging Face courses  
-- NVIDIA DLI courses  
-- Microsoft Learn badges  
-- Google Cloud Skills Boost paths  
+- AWS Certified AI Practitioner - Foundational
+- AWS Certified Cloud Practitioner - Foundational
+- AWS Certified Machine Learning Engineer - Associate
+- AWS Certified Solutions Architect - Associate
+- AWS Certified Developer - Associate
+- AWS Certified Data Engineer - Associate
+- AWS Certified Solutions Architect - Professional
+- AWS Certified DevOps Engineer - Professional
+- AWS Certified Machine Learning - Specialty
 
 A full certificate tracker lives in the wiki.
 
 ---
 
-## **📘 Wiki**
-The full day‑by‑day roadmap, certificate tracker, and progress logs are maintained in the project wiki.
+# **📘 Wiki**
+The wiki contains the day‑by‑day roadmap, certificate tracker, and progress logs.
 
 ---
 
-## **🎯 Goal**
+# **🎯 Goal**
 By March 15, 2026, I will be fully prepared to interview for:
 
 - **AI Infrastructure Engineer**  
 - **Senior MLOps Engineer**  
-- **AI Platform Engineer**  
-- **Multimodal Systems Engineer**
+- **AI Platform Engineer** 
 
-These roles represent the highest‑impact, highest‑compensation segment of the AI engineering field, and align directly with my background in DevOps, automation, and GPU‑accelerated workflows.
+These roles align directly with my background in DevOps, automation, cloud architecture, and emerging AI workflows — and this project serves as a public, interactive demonstration of those skills.
+
+---
