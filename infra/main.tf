@@ -46,28 +46,32 @@ resource "aws_iam_role_policy" "kb_policy" {
   role = aws_iam_role.kb_role.id
 
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [
-      # Allow Bedrock to read from your KB bucket
       {
-        Effect = "Allow"
+        Effect = "Allow",
         Action = [
           "s3:GetObject",
           "s3:ListBucket"
-        ]
+        ],
         Resource = [
           aws_s3_bucket.knowledge.arn,
           "${aws_s3_bucket.knowledge.arn}/*"
         ]
       },
-
-      # Allow Bedrock to query the vector index it created
       {
-        Effect = "Allow"
+        Effect = "Allow",
         Action = [
+          "s3vectors:CreateIndex",
+          "s3vectors:DeleteIndex",
+          "s3vectors:GetIndex",
+          "s3vectors:ListIndexes",
+          "s3vectors:PutVectors",
+          "s3vectors:GetVectors",
+          "s3vectors:DeleteVectors",
           "s3vectors:QueryVectors"
-        ]
-        Resource = "arn:aws:s3vectors:us-east-2:202720549329:bucket/bedrock-knowledge-base-f82rep/*"
+        ],
+        Resource = "arn:aws:s3vectors:${var.aws_region}:${data.aws_caller_identity.current.account_id}:bucket/*"
       }
     ]
   })
