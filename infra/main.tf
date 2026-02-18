@@ -26,7 +26,7 @@ resource "aws_s3_bucket" "knowledge" {
   bucket = "mrbeefy-knowledge-${random_id.suffix.hex}"
 }
 
-# IAM role for KB (used by CLI-created KB)
+# IAM role for KB (used by console-created KB)
 resource "aws_iam_role" "kb_role" {
   name = "mrbeefy-kb-role"
 
@@ -46,18 +46,32 @@ resource "aws_iam_role_policy" "kb_policy" {
   role = aws_iam_role.kb_role.id
 
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [
       {
-        Effect = "Allow"
+        Effect = "Allow",
         Action = [
           "s3:GetObject",
           "s3:ListBucket"
-        ]
+        ],
         Resource = [
           aws_s3_bucket.knowledge.arn,
           "${aws_s3_bucket.knowledge.arn}/*"
         ]
+      },
+      {
+        Effect = "Allow",
+        Action = [
+          "s3vectors:CreateIndex",
+          "s3vectors:DeleteIndex",
+          "s3vectors:GetIndex",
+          "s3vectors:ListIndexes",
+          "s3vectors:PutVectors",
+          "s3vectors:GetVectors",
+          "s3vectors:DeleteVectors",
+          "s3vectors:QueryVectors"
+        ],
+        Resource = "arn:aws:s3vectors:${var.aws_region}:${data.aws_caller_identity.current.account_id}:bucket/*"
       }
     ]
   })
