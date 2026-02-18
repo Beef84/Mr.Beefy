@@ -1,5 +1,5 @@
 output "knowledge_bucket" {
-  value = data.aws_s3_bucket.knowledge.bucket
+  value = aws_s3_bucket.knowledge.bucket
 }
 
 output "kb_role_arn" {
