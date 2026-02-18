@@ -155,7 +155,6 @@ resource "aws_lambda_function" "api" {
     variables = {
       AGENT_ID       = aws_bedrockagent_agent.mrbeefy.id
       AGENT_ALIAS_ID = aws_bedrockagent_agent_alias.mrbeefy_prod.id
-      AWS_REGION     = "us-east-1"
     }
   }
 }
