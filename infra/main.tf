@@ -23,6 +23,10 @@ resource "random_id" "suffix" {
   byte_length = 4
 }
 
+data "aws_s3_bucket" "knowledge" {
+  bucket = "mrbeefy-knowledge-dc21c9c0"
+}
+
 # ---------------------------------------------------------
 # Knowledge Base IAM Role
 # ---------------------------------------------------------
