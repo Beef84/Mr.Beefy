@@ -63,7 +63,7 @@ resource "aws_iam_role_policy" "kb_policy" {
         ]
       },
 
-      # FIXED: Vector store region must be us-east-1, not us-east-2
+      # Vector store permissions (correct region)
       {
         Effect = "Allow",
         Action = [
@@ -79,11 +79,12 @@ resource "aws_iam_role_policy" "kb_policy" {
         Resource = "arn:aws:s3vectors:us-east-1:${data.aws_caller_identity.current.account_id}:bucket/*"
       },
 
-      # REQUIRED: Allow KB to call the embedding model
+      # REQUIRED: Bedrock embedding model permissions
       {
         Effect = "Allow",
         Action = [
-          "bedrock:InvokeModel"
+          "bedrock:InvokeModel",
+          "bedrock:InvokeModelWithResponseStream"
         ],
         Resource = "arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0"
       }
