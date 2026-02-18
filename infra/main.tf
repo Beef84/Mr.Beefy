@@ -63,7 +63,7 @@ resource "aws_iam_role_policy" "kb_policy" {
         ]
       },
 
-      # FIXED: Vector store region must be us-east-1, not us-east-2
+      # Vector store permissions (correct region)
       {
         Effect = "Allow",
         Action = [
@@ -79,11 +79,12 @@ resource "aws_iam_role_policy" "kb_policy" {
         Resource = "arn:aws:s3vectors:us-east-1:${data.aws_caller_identity.current.account_id}:bucket/*"
       },
 
-      # REQUIRED: Allow KB to call the embedding model
+      # REQUIRED: Bedrock embedding model permissions
       {
         Effect = "Allow",
         Action = [
-          "bedrock:InvokeModel"
+          "bedrock:InvokeModel",
+          "bedrock:InvokeModelWithResponseStream"
         ],
         Resource = "arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0"
       }
@@ -92,25 +93,73 @@ resource "aws_iam_role_policy" "kb_policy" {
 }
 
 # Agent execution role
-resource "aws_iam_role" "agent_role" {
+resource "aws_iam_role" "agent_execution_role" {
   name = "mrbeefy-agent-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Principal = {
-        Service = "bedrock.amazonaws.com"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "bedrock.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
       }
-      Action = "sts:AssumeRole"
-    }]
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "agent_execution_policy" {
+  name = "mrbeefy-agent-policy"
+  role = aws_iam_role.agent_execution_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      # Allow the agent to call your Nova model
+      {
+        Effect = "Allow"
+        Action = [
+          "bedrock:InvokeModel",
+          "bedrock:InvokeModelWithResponseStream"
+        ]
+        Resource = "arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-pro-v1:0"
+      },
+
+      # Allow the agent to retrieve from your Knowledge Base
+      {
+        Effect = "Allow"
+        Action = [
+          "bedrock:Retrieve",
+          "bedrock:RetrieveAndGenerate"
+        ]
+        Resource = "arn:aws:bedrock:us-east-1:202720549329:knowledge-base/*"
+      },
+
+      # Allow the agent to read from your KB S3 bucket
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket"
+        ]
+        Resource = "arn:aws:s3:::mrbeefy-knowledge-base"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject"
+        ]
+        Resource = "arn:aws:s3:::mrbeefy-knowledge-base/*"
+      }
+    ]
   })
 }
 
 # Bedrock Agent
 resource "aws_bedrockagent_agent" "mrbeefy" {
   agent_name              = "mrbeefy-agent"
-  foundation_model        = "anthropic.claude-3-5-sonnet-20240620-v1:0"
+  foundation_model        = "amazon.nova-pro-v1:0"
   agent_resource_role_arn = aws_iam_role.agent_role.arn
 
   instruction = <<EOF
