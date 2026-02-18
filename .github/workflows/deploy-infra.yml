@@ -44,20 +44,11 @@ jobs:
       run: zip -r dist.zip dist
 
     # -----------------------------
-    # Terraform Deploy (Bootstrap + Main)
+    # Terraform Deploy (Main)
     # -----------------------------
 
     - name: Install Terraform
       uses: hashicorp/setup-terraform@v3
-
-    # --- BOOTSTRAP BACKEND ---
-    - name: Terraform Init (bootstrap)
-      working-directory: infra/bootstrap
-      run: terraform init -upgrade
-
-    - name: Terraform Apply (bootstrap)
-      working-directory: infra/bootstrap
-      run: terraform apply -auto-approve
 
     # --- MAIN INFRA ---
     - name: Terraform Init (main)
