@@ -103,3 +103,46 @@ body {
     color: #d0d0d0;
     line-height: 1.5;
 }
+
+.chat-box {
+    margin-top: 2rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 1rem;
+    background: #fafafa;
+}
+
+.messages {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+}
+
+.message {
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 6px;
+}
+
+    .message.user {
+        background: #d9eaff;
+        align-self: flex-end;
+    }
+
+    .message.assistant {
+        background: #f0f0f0;
+    }
+
+.input-row {
+    display: flex;
+    gap: 0.5rem;
+}
+
+    .input-row input {
+        flex: 1;
+        padding: 0.5rem;
+    }
+
+    .input-row button {
+        padding: 0.5rem 1rem;
+    }
