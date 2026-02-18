@@ -3,7 +3,15 @@ param(
   [string]$KbId
 )
 
-aws bedrock-agent associate-agent-knowledge-base `
+# Get the current agent version
+$AGENT_VERSION = aws bedrock-agent get-agent `
   --agent-id $AgentId `
-  --knowledge-base-id $KbId `
-  --description "Primary KB for Mr. Beefy"
+  --query "agent.agentVersion" `
+  --output text
+
+Write-Host "Using Agent Version: $AGENT_VERSION"
+
+aws bedrock-agent associate-knowledge-base `
+  --agent-id $AgentId `
+  --agent-version $AGENT_VERSION `
+  --knowledge-base-id $KbId
