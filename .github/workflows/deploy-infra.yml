@@ -83,8 +83,13 @@ jobs:
       shell: pwsh
       run: |
         $KB_ID = aws bedrock-agent list-knowledge-bases `
-          --query "knowledgeBaseSummaries[?name=='mrbeefy-kb'].knowledgeBaseId" `
+          --query "knowledgeBaseSummaries[?name=='mrbeefy-kb'] | [0].knowledgeBaseId" `
           --output text
+
+        if (-not $KB_ID -or $KB_ID -eq "None") {
+            Write-Error "Knowledge Base 'mrbeefy-kb' not found. Check the KB name."
+            exit 1
+        }
 
         ./associate_kb.ps1 `
           -AgentId "${{ steps.tfout.outputs.agent_id }}" `
