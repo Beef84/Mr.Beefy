@@ -70,7 +70,7 @@ jobs:
         echo "alias_id=$(terraform output -raw agent_alias_id)" >> $GITHUB_OUTPUT
 
     # -----------------------------
-    # CLI: Create KB + Data Source
+    # CLI: Create KB
     # -----------------------------
     - name: Install AWS CLI v2
       run: |
@@ -85,18 +85,6 @@ jobs:
         ./create_kb.ps1 `
           -BucketArn "arn:aws:s3:::${{ steps.tfout.outputs.bucket }}" `
           -KbRoleArn "${{ steps.tfout.outputs.kb_role }}"
-
-    - name: Create Data Source
-      working-directory: infra/cli
-      shell: pwsh
-      run: |
-        $KB_ID = aws bedrock-agent list-knowledge-bases `
-          --query "knowledgeBaseSummaries[?name=='mrbeefy-kb'].knowledgeBaseId" `
-          --output text
-
-        ./create_data_source.ps1 `
-          -KbId $KB_ID `
-          -BucketArn "arn:aws:s3:::${{ steps.tfout.outputs.bucket }}"
 
     - name: Associate KB with Agent
       working-directory: infra/cli
