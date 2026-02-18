@@ -14,7 +14,7 @@ $kbConfig = @{
 # --- Storage Configuration ---
 $storageConfig = @{
     type = "S3"
-    s3Configuration = @{
+    s3VectorsConfiguration = @{
         bucketArn = $BucketArn
     }
 } | ConvertTo-Json -Depth 5
