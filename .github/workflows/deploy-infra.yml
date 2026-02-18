@@ -1,0 +1,100 @@
+name: Deploy Mr. Beefy Infra
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    # -----------------------------
+    # Build Lambda
+    # -----------------------------
+    - name: Install Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+
+    - name: Install Lambda Dependencies
+      working-directory: infra/lambda
+      run: npm install
+
+    - name: Build Lambda Bundle
+      working-directory: infra/lambda
+      run: npm run build
+
+    - name: Zip Lambda Bundle
+      working-directory: infra/lambda
+      run: zip -r dist.zip dist
+
+    # -----------------------------
+    # Terraform Deploy
+    # -----------------------------
+    - name: Install Terraform
+      uses: hashicorp/setup-terraform@v3
+
+    - name: Terraform Init
+      working-directory: infra
+      run: terraform init -upgrade
+
+    - name: Terraform Apply
+      working-directory: infra
+      run: terraform apply -auto-approve
+
+    - name: Capture Terraform Outputs
+      id: tfout
+      working-directory: infra
+      run: |
+        echo "bucket=$(terraform output -raw knowledge_bucket)" >> $GITHUB_OUTPUT
+        echo "kb_role=$(terraform output -raw kb_role_arn)" >> $GITHUB_OUTPUT
+        echo "agent_id=$(terraform output -raw agent_id)" >> $GITHUB_OUTPUT
+        echo "alias_id=$(terraform output -raw agent_alias_id)" >> $GITHUB_OUTPUT
+
+    # -----------------------------
+    # CLI: Create KB + Data Source
+    # -----------------------------
+    - name: Install AWS CLI
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y awscli
+
+    - name: Create Knowledge Base
+      working-directory: infra/cli
+      run: |
+        pwsh ./create_kb.ps1 `
+          -BucketArn arn:aws:s3:::${{ steps.tfout.outputs.bucket }} `
+          -KbRoleArn ${{ steps.tfout.outputs.kb_role }}
+
+    - name: Create Data Source
+      working-directory: infra/cli
+      run: |
+        KB_ID=$(aws bedrock-agent list-knowledge-bases \
+          --query "knowledgeBaseSummaries[?name=='mrbeefy-kb'].knowledgeBaseId" \
+          --output text)
+
+        pwsh ./create_data_source.ps1 `
+          -KbId $KB_ID `
+          -BucketArn arn:aws:s3:::${{ steps.tfout.outputs.bucket }}
+
+    - name: Associate KB with Agent
+      working-directory: infra/cli
+      run: |
+        KB_ID=$(aws bedrock-agent list-knowledge-bases \
+          --query "knowledgeBaseSummaries[?name=='mrbeefy-kb'].knowledgeBaseId" \
+          --output text)
+
+        pwsh ./associate_kb.ps1 `
+          -AgentId ${{ steps.tfout.outputs.agent_id }} `
+          -KbId $KB_ID
