@@ -17,6 +17,8 @@ provider "aws" {
   region = "us-east-1"
 }
 
+data "aws_caller_identity" "current" {}
+
 resource "random_id" "suffix" {
   byte_length = 4
 }
@@ -26,7 +28,7 @@ resource "aws_s3_bucket" "knowledge" {
   bucket = "mrbeefy-knowledge-${random_id.suffix.hex}"
 }
 
-# IAM role for KB (used by console-created KB)
+# IAM role for KB
 resource "aws_iam_role" "kb_role" {
   name = "mrbeefy-kb-role"
 
@@ -48,6 +50,7 @@ resource "aws_iam_role_policy" "kb_policy" {
   policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
+      # Allow KB to read from S3
       {
         Effect = "Allow",
         Action = [
@@ -59,6 +62,8 @@ resource "aws_iam_role_policy" "kb_policy" {
           "${aws_s3_bucket.knowledge.arn}/*"
         ]
       },
+
+      # FIXED: Vector store region must be us-east-1, not us-east-2
       {
         Effect = "Allow",
         Action = [
@@ -71,7 +76,16 @@ resource "aws_iam_role_policy" "kb_policy" {
           "s3vectors:DeleteVectors",
           "s3vectors:QueryVectors"
         ],
-        Resource = "arn:aws:s3vectors:us-east-2:202720549329:bucket/*"
+        Resource = "arn:aws:s3vectors:us-east-1:${data.aws_caller_identity.current.account_id}:bucket/*"
+      },
+
+      # REQUIRED: Allow KB to call the embedding model
+      {
+        Effect = "Allow",
+        Action = [
+          "bedrock:InvokeModel"
+        ],
+        Resource = "arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0"
       }
     ]
   })
@@ -155,7 +169,7 @@ resource "aws_iam_role_policy" "lambda_policy" {
   })
 }
 
-# Lambda function (Node 20)
+# Lambda function
 resource "aws_lambda_function" "api" {
   function_name = "mrbeefy-api"
   role          = aws_iam_role.lambda_role.arn
