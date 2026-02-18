@@ -23,12 +23,16 @@ resource "random_id" "suffix" {
   byte_length = 4
 }
 
-# Knowledge S3 bucket
+# ---------------------------------------------------------
+# Knowledge Base S3 bucket
+# ---------------------------------------------------------
 resource "aws_s3_bucket" "knowledge" {
   bucket = "mrbeefy-knowledge-${random_id.suffix.hex}"
 }
 
-# IAM role for KB
+# ---------------------------------------------------------
+# Knowledge Base IAM Role
+# ---------------------------------------------------------
 resource "aws_iam_role" "kb_role" {
   name = "mrbeefy-kb-role"
 
@@ -63,7 +67,7 @@ resource "aws_iam_role_policy" "kb_policy" {
         ]
       },
 
-      # Vector store permissions (correct region)
+      # Vector store permissions
       {
         Effect = "Allow",
         Action = [
@@ -79,7 +83,7 @@ resource "aws_iam_role_policy" "kb_policy" {
         Resource = "arn:aws:s3vectors:us-east-1:${data.aws_caller_identity.current.account_id}:bucket/*"
       },
 
-      # REQUIRED: Bedrock embedding model permissions
+      # Embedding model
       {
         Effect = "Allow",
         Action = [
@@ -92,7 +96,9 @@ resource "aws_iam_role_policy" "kb_policy" {
   })
 }
 
-# Agent execution role
+# ---------------------------------------------------------
+# Agent Execution Role
+# ---------------------------------------------------------
 resource "aws_iam_role" "agent_execution_role" {
   name = "mrbeefy-agent-role"
 
@@ -119,48 +125,50 @@ resource "aws_iam_role_policy" "agent_execution_policy" {
     Statement = [
       # Allow the agent to call your Nova model
       {
-        Effect = "Allow"
+        Effect = "Allow",
         Action = [
           "bedrock:InvokeModel",
           "bedrock:InvokeModelWithResponseStream"
-        ]
+        ],
         Resource = "arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-pro-v1:0"
       },
 
       # Allow the agent to retrieve from your Knowledge Base
       {
-        Effect = "Allow"
+        Effect = "Allow",
         Action = [
           "bedrock:Retrieve",
           "bedrock:RetrieveAndGenerate"
-        ]
-        Resource = "arn:aws:bedrock:us-east-1:202720549329:knowledge-base/*"
+        ],
+        Resource = "arn:aws:bedrock:us-east-1:${data.aws_caller_identity.current.account_id}:knowledge-base/*"
       },
 
       # Allow the agent to read from your KB S3 bucket
       {
-        Effect = "Allow"
+        Effect = "Allow",
         Action = [
           "s3:ListBucket"
-        ]
-        Resource = "arn:aws:s3:::mrbeefy-knowledge-base"
+        ],
+        Resource = aws_s3_bucket.knowledge.arn
       },
       {
-        Effect = "Allow"
+        Effect = "Allow",
         Action = [
           "s3:GetObject"
-        ]
-        Resource = "arn:aws:s3:::mrbeefy-knowledge-base/*"
+        ],
+        Resource = "${aws_s3_bucket.knowledge.arn}/*"
       }
     ]
   })
 }
 
+# ---------------------------------------------------------
 # Bedrock Agent
+# ---------------------------------------------------------
 resource "aws_bedrockagent_agent" "mrbeefy" {
   agent_name              = "mrbeefy-agent"
   foundation_model        = "amazon.nova-pro-v1:0"
-  agent_resource_role_arn = aws_iam_role.agent_role.arn
+  agent_resource_role_arn = aws_iam_role.agent_execution_role.arn
 
   instruction = <<EOF
 You are Mr. Beefy, an AI agent engineered by Jordan Oberrath.
@@ -170,13 +178,17 @@ You never fabricate details.
 EOF
 }
 
-# Agent alias
+# ---------------------------------------------------------
+# Agent Alias
+# ---------------------------------------------------------
 resource "aws_bedrockagent_agent_alias" "mrbeefy_prod" {
   agent_id         = aws_bedrockagent_agent.mrbeefy.id
   agent_alias_name = "prod"
 }
 
-# Lambda role
+# ---------------------------------------------------------
+# Lambda Role
+# ---------------------------------------------------------
 resource "aws_iam_role" "lambda_role" {
   name = "mrbeefy-lambda-role"
 
@@ -199,26 +211,28 @@ resource "aws_iam_role_policy" "lambda_policy" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect = "Allow"
+        Effect = "Allow",
         Action = [
           "logs:CreateLogGroup",
           "logs:CreateLogStream",
           "logs:PutLogEvents"
-        ]
+        ],
         Resource = "arn:aws:logs:*:*:*"
       },
       {
-        Effect = "Allow"
+        Effect = "Allow",
         Action = [
           "bedrock-agent-runtime:InvokeAgent"
-        ]
+        ],
         Resource = "*"
       }
     ]
   })
 }
 
-# Lambda function
+# ---------------------------------------------------------
+# Lambda Function
+# ---------------------------------------------------------
 resource "aws_lambda_function" "api" {
   function_name = "mrbeefy-api"
   role          = aws_iam_role.lambda_role.arn
@@ -236,7 +250,9 @@ resource "aws_lambda_function" "api" {
   }
 }
 
-# HTTP API Gateway
+# ---------------------------------------------------------
+# API Gateway
+# ---------------------------------------------------------
 resource "aws_apigatewayv2_api" "http_api" {
   name          = "mrbeefy-http-api"
   protocol_type = "HTTP"
