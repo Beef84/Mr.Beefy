@@ -24,13 +24,6 @@ resource "random_id" "suffix" {
 }
 
 # ---------------------------------------------------------
-# Knowledge Base S3 bucket
-# ---------------------------------------------------------
-resource "aws_s3_bucket" "knowledge" {
-  bucket = "mrbeefy-knowledge-${random_id.suffix.hex}"
-}
-
-# ---------------------------------------------------------
 # Knowledge Base IAM Role
 # ---------------------------------------------------------
 resource "aws_iam_role" "kb_role" {
@@ -62,8 +55,8 @@ resource "aws_iam_role_policy" "kb_policy" {
           "s3:ListBucket"
         ],
         Resource = [
-          aws_s3_bucket.knowledge.arn,
-          "${aws_s3_bucket.knowledge.arn}/*"
+          "arn:aws:s3:::mrbeefy-knowledge-dc21c9c0",
+          "arn:aws:s3:::mrbeefy-knowledge-dc21c9c0/*"
         ]
       },
 
@@ -149,14 +142,14 @@ resource "aws_iam_role_policy" "agent_execution_policy" {
         Action = [
           "s3:ListBucket"
         ],
-        Resource = aws_s3_bucket.knowledge.arn
+        Resource = "arn:aws:s3:::mrbeefy-knowledge-dc21c9c0"
       },
       {
         Effect = "Allow",
         Action = [
           "s3:GetObject"
         ],
-        Resource = "${aws_s3_bucket.knowledge.arn}/*"
+        Resource = "arn:aws:s3:::mrbeefy-knowledge-dc21c9c0/*"
       }
     ]
   })
