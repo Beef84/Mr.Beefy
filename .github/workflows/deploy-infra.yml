@@ -80,29 +80,32 @@ jobs:
 
     - name: Create Knowledge Base
       working-directory: infra/cli
+      shell: pwsh
       run: |
-        pwsh ./create_kb.ps1 `
-          -BucketArn arn:aws:s3:::${{ steps.tfout.outputs.bucket }} `
-          -KbRoleArn ${{ steps.tfout.outputs.kb_role }}
+        ./create_kb.ps1 `
+          -BucketArn "arn:aws:s3:::${{ steps.tfout.outputs.bucket }}" `
+          -KbRoleArn "${{ steps.tfout.outputs.kb_role }}"
 
     - name: Create Data Source
       working-directory: infra/cli
+      shell: pwsh
       run: |
-        KB_ID=$(aws bedrock-agent list-knowledge-bases \
-          --query "knowledgeBaseSummaries[?name=='mrbeefy-kb'].knowledgeBaseId" \
-          --output text)
+        $KB_ID = aws bedrock-agent list-knowledge-bases `
+          --query "knowledgeBaseSummaries[?name=='mrbeefy-kb'].knowledgeBaseId" `
+          --output text
 
-        pwsh ./create_data_source.ps1 `
+        ./create_data_source.ps1 `
           -KbId $KB_ID `
-          -BucketArn arn:aws:s3:::${{ steps.tfout.outputs.bucket }}
+          -BucketArn "arn:aws:s3:::${{ steps.tfout.outputs.bucket }}"
 
     - name: Associate KB with Agent
       working-directory: infra/cli
+      shell: pwsh
       run: |
-        KB_ID=$(aws bedrock-agent list-knowledge-bases \
-          --query "knowledgeBaseSummaries[?name=='mrbeefy-kb'].knowledgeBaseId" \
-          --output text)
+        $KB_ID = aws bedrock-agent list-knowledge-bases `
+          --query "knowledgeBaseSummaries[?name=='mrbeefy-kb'].knowledgeBaseId" `
+          --output text
 
-        pwsh ./associate_kb.ps1 `
-          -AgentId ${{ steps.tfout.outputs.agent_id }} `
+        ./associate_kb.ps1 `
+          -AgentId "${{ steps.tfout.outputs.agent_id }}" `
           -KbId $KB_ID
