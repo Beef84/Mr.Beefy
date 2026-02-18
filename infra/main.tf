@@ -1,4 +1,4 @@
-terraform {
+﻿terraform {
   required_version = ">= 1.6.0"
 
   required_providers {
@@ -283,4 +283,13 @@ resource "aws_lambda_permission" "api_gateway_invoke" {
   function_name = aws_lambda_function.api.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
+}
+
+# Agent ↔ Knowledge Base Association
+resource "aws_bedrockagent_agent_knowledge_base_association" "mrbeefy_kb_assoc" {
+  agent_id                        = aws_bedrockagent_agent.mrbeefy.id
+  agent_version                   = "DRAFT"
+  knowledge_base_id               = "TEDYUR5R1M"
+  knowledge_base_association_name = "mrbeefy-kb-assoc"
+  description                     = "Associate mrbeefy-agent with mrbeefy-kb"
 }
