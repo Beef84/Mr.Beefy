@@ -71,7 +71,7 @@ resource "aws_iam_role_policy" "kb_policy" {
           "s3vectors:DeleteVectors",
           "s3vectors:QueryVectors"
         ],
-        Resource = "arn:aws:s3vectors:${var.aws_region}:${data.aws_caller_identity.current.account_id}:bucket/*"
+        Resource = "arn:aws:s3vectors:us-east-2:202720549329:bucket/*"
       }
     ]
   })
