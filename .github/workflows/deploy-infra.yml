@@ -78,14 +78,6 @@ jobs:
         unzip awscliv2.zip
         sudo ./aws/install --update
 
-    - name: Create Knowledge Base
-      working-directory: infra/cli
-      shell: pwsh
-      run: |
-        ./create_kb.ps1 `
-          -BucketArn "arn:aws:s3:::${{ steps.tfout.outputs.bucket }}" `
-          -KbRoleArn "${{ steps.tfout.outputs.kb_role }}"
-
     - name: Associate KB with Agent
       working-directory: infra/cli
       shell: pwsh

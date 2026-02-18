@@ -26,7 +26,7 @@ resource "aws_s3_bucket" "knowledge" {
   bucket = "mrbeefy-knowledge-${random_id.suffix.hex}"
 }
 
-# IAM role for KB (used by CLI-created KB)
+# IAM role for KB (used by console-created KB)
 resource "aws_iam_role" "kb_role" {
   name = "mrbeefy-kb-role"
 
@@ -48,6 +48,7 @@ resource "aws_iam_role_policy" "kb_policy" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
+      # Allow Bedrock to read from your KB bucket
       {
         Effect = "Allow"
         Action = [
@@ -58,6 +59,15 @@ resource "aws_iam_role_policy" "kb_policy" {
           aws_s3_bucket.knowledge.arn,
           "${aws_s3_bucket.knowledge.arn}/*"
         ]
+      },
+
+      # Allow Bedrock to query the vector index it created
+      {
+        Effect = "Allow"
+        Action = [
+          "s3vectors:QueryVectors"
+        ]
+        Resource = "arn:aws:s3vectors:us-east-2:202720549329:bucket/bedrock-knowledge-base-f82rep/*"
       }
     ]
   })
