@@ -31,6 +31,10 @@ jobs:
       working-directory: infra/lambda
       run: npm install
 
+    - name: Fix esbuild permissions
+      working-directory: infra/lambda
+      run: chmod +x node_modules/.bin/esbuild
+
     - name: Build Lambda Bundle
       working-directory: infra/lambda
       run: npm run build
