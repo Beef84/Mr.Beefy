@@ -127,9 +127,117 @@ jobs:
           -AgentVersion "DRAFT"
 
     # -----------------------------
-    # Terraform Apply again to publish version and update alias
-    # (requires aws_bedrockagent_agent_version + alias routing in your .tf)
+    # Ensure Python boto3 is available (CI only)
     # -----------------------------
-    - name: Terraform Apply (publish version + update alias)
-      working-directory: infra
-      run: terraform apply -auto-approve
+    - name: Ensure Python boto3
+      shell: pwsh
+      working-directory: infra/cli
+      run: |
+        python -V
+        python -m pip install --upgrade pip
+        pip install boto3
+
+    # -----------------------------
+    # Publish Agent Version and Update Alias (CLI first, then SDK fallback)
+    # -----------------------------
+    - name: Publish Agent Version and Update Alias (CLI first, then SDK)
+      shell: pwsh
+      working-directory: infra/cli
+      env:
+        AWS_REGION: us-east-1
+        AGENT_ID: ${{ steps.tfout.outputs.agent_id }}
+        ALIAS_ID: ${{ steps.tfout.outputs.alias_id }}
+      run: |
+        $ErrorActionPreference = "Stop"
+
+        if (-not $env:AGENT_ID -or -not $env:ALIAS_ID) {
+          Write-Error "Missing agent_id or alias_id from Terraform outputs."
+          exit 1
+        }
+
+        Write-Host "Attempting to publish via AWS CLI (preferred)..."
+        try {
+          $publishJson = aws bedrock-agent publish-agent-version `
+            --region $env:AWS_REGION `
+            --agent-id $env:AGENT_ID `
+            --output json 2>&1
+
+          if ($LASTEXITCODE -eq 0) {
+            $pub = $publishJson | ConvertFrom-Json
+            $version = $pub.agentVersion.version
+            if (-not $version) { throw "CLI publish returned no version." }
+            Write-Host "Published version (CLI): $version"
+
+            Write-Host "Updating alias via AWS CLI..."
+            $routing = "[{\"agentVersion\":\"$version\"}]"
+            aws bedrock-agent update-agent-alias `
+              --region $env:AWS_REGION `
+              --agent-id $env:AGENT_ID `
+              --agent-alias-id $env:ALIAS_ID `
+              --routing-configuration $routing
+
+            Write-Host "Alias updated to version $version (via CLI)."
+            exit 0
+          } else {
+            Write-Host "AWS CLI publish failed or not available; falling back to SDK."
+            throw "CLI publish failed"
+          }
+        } catch {
+          Write-Host "Falling back to Python SDK publish/update. Error: $($_.Exception.Message)"
+        }
+
+        # -----------------------------
+        # Fallback: inline Python call using boto3 (no files to commit)
+        # -----------------------------
+        $py = @"
+        import sys, json, boto3
+        from botocore.exceptions import ClientError
+
+        agent_id = sys.argv[1]
+        alias_id = sys.argv[2]
+        region = sys.argv[3]
+
+        client = boto3.client('bedrock-agent', region_name=region)
+
+        try:
+            pub = client.publish_agent_version(agentId=agent_id)
+            version = pub.get('agentVersion', {}).get('version')
+            if not version:
+                print(json.dumps({'error':'no version returned'}))
+                sys.exit(2)
+
+            client.update_agent_alias(
+                agentId=agent_id,
+                agentAliasId=alias_id,
+                routingConfiguration=[{'agentVersion': str(version)}]
+            )
+
+            print(json.dumps({'version': str(version)}))
+            sys.exit(0)
+        except ClientError as e:
+            print(json.dumps({'error': str(e)}))
+            sys.exit(3)
+        "@
+
+                $pyFile = Join-Path $PWD "tmp_publish_and_update.py"
+                $py | Out-File -FilePath $pyFile -Encoding utf8
+
+                Write-Host "Running Python SDK publish/update..."
+                $proc = & python $pyFile $env:AGENT_ID $env:ALIAS_ID $env:AWS_REGION 2>&1
+                $exit = $LASTEXITCODE
+                Write-Host $proc
+
+                if ($exit -ne 0) {
+                  Write-Error "Publish/update failed (exit $exit). See logs above."
+                  exit $exit
+                }
+
+                $result = $proc | ConvertFrom-Json
+                if ($result.version) {
+                  Write-Host "Published version (SDK): $($result.version)"
+                  Write-Host "Alias updated to version $($result.version) (via SDK)."
+                  exit 0
+                } else {
+                  Write-Error "Publish/update did not return a version. Output: $proc"
+                  exit 1
+                }
