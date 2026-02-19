@@ -225,7 +225,7 @@ resource "aws_iam_role_policy" "lambda_policy" {
       {
         Effect = "Allow"
         Action = [
-          "bedrock-agent-runtime:InvokeAgent"
+          "bedrock:InvokeAgent"
         ]
         Resource = "*"
       }
