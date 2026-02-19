@@ -3,17 +3,18 @@ param(
   [string]$KbId
 )
 
-# Get the current agent version
-$AGENT_VERSION = aws bedrock-agent get-agent `
+# Get the latest published agent version
+$AGENT_VERSION = aws bedrock-agent list-agent-versions `
   --agent-id $AgentId `
-  --query "agent.agentVersion" `
+  --query "agentVersionSummaries[-1].agentVersion" `
   --output text
 
 if (-not $AGENT_VERSION -or $AGENT_VERSION -eq "None") {
-    $AGENT_VERSION = "DRAFT"
+    Write-Host "No published versions found. Cannot associate KB to DRAFT for production."
+    exit 1
 }
 
-Write-Host "Using Agent Version: $AGENT_VERSION"
+Write-Host "Using Published Agent Version: $AGENT_VERSION"
 
 # Check if the KB is already associated
 $EXISTS = aws bedrock-agent list-agent-knowledge-bases `
@@ -23,24 +24,17 @@ $EXISTS = aws bedrock-agent list-agent-knowledge-bases `
   --output text
 
 if ($EXISTS -eq 1) {
-    Write-Host "Knowledge Base $KbId is already associated with agent $AgentId. Skipping."
+    Write-Host "Knowledge Base $KbId is already associated with agent version $AGENT_VERSION. Skipping."
     exit 0
 }
 
-Write-Host "Associating Knowledge Base $KbId with agent $AgentId..."
+Write-Host "Associating Knowledge Base $KbId with agent version $AGENT_VERSION..."
 
-# Attempt association
-try {
-    aws bedrock-agent associate-agent-knowledge-base `
-      --agent-id $AgentId `
-      --agent-version $AGENT_VERSION `
-      --knowledge-base-id $KbId `
-      --description "Primary KB association for mrbeefy agent" `
-      --knowledge-base-state ENABLED
+aws bedrock-agent associate-agent-knowledge-base `
+  --agent-id $AgentId `
+  --agent-version $AGENT_VERSION `
+  --knowledge-base-id $KbId `
+  --description "Primary KB association for mrbeefy agent" `
+  --knowledge-base-state ENABLED
 
-    Write-Host "KB association completed."
-}
-catch {
-    Write-Error "KB association failed: $($_.Exception.Message)"
-    exit 1
-}
+Write-Host "KB association completed."
