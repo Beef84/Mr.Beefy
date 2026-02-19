@@ -193,7 +193,7 @@ jobs:
         }
 
         # Fallback: inline Python call using boto3 (no files to commit)
-        $py = @"
+        $py = @'
 import sys, json, boto3
 from botocore.exceptions import ClientError
 
@@ -221,7 +221,7 @@ try:
 except ClientError as e:
     print(json.dumps({'error': str(e)}))
     sys.exit(3)
-"@
+'@
 
         $pyFile = Join-Path $PWD "tmp_publish_and_update.py"
         $py | Out-File -FilePath $pyFile -Encoding utf8
