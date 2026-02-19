@@ -104,7 +104,19 @@ jobs:
         ./ingest.ps1 -KbId $KB_ID
 
     # -----------------------------
-    # Associate KB with Agent
+    # PUBLISH NEW AGENT VERSION  <<<<<< REQUIRED
+    # -----------------------------
+    - name: Publish Agent Version
+      id: publish
+      run: |
+        VERSION=$(aws bedrock-agent publish-agent-version \
+          --agent-id ${{ steps.tfout.outputs.agent_id }} \
+          --query "agentVersion.version" \
+          --output text)
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    # -----------------------------
+    # Associate KB with Agent VERSION  <<<<<< FIXED
     # -----------------------------
     - name: Associate KB with Agent
       working-directory: infra/cli
@@ -121,4 +133,15 @@ jobs:
 
         ./associate_kb.ps1 `
           -AgentId "${{ steps.tfout.outputs.agent_id }}" `
-          -KbId $KB_ID
+          -KbId $KB_ID `
+          -AgentVersion "${{ steps.publish.outputs.version }}"
+
+    # -----------------------------
+    # UPDATE ALIAS TO NEW VERSION  <<<<<< REQUIRED
+    # -----------------------------
+    - name: Update Agent Alias
+      run: |
+        aws bedrock-agent update-agent-alias \
+          --agent-id ${{ steps.tfout.outputs.agent_id }} \
+          --agent-alias-id ${{ steps.tfout.outputs.alias_id }} \
+          --routing-configuration "[{\"agentVersion\":\"${{ steps.publish.outputs.version }}\"}]"
