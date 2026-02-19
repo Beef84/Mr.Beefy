@@ -185,17 +185,13 @@ ACTION RULES:
 EOF
 }
 
-resource "aws_bedrockagent_agent_version" "mrbeefy" {
-  agent_id = aws_bedrockagent_agent.mrbeefy.id
-}
-
 # Agent alias
 resource "aws_bedrockagent_agent_alias" "mrbeefy_prod" {
   agent_id         = aws_bedrockagent_agent.mrbeefy.id
   agent_alias_name = "prod"
 
-  routing_configuration {
-    agent_version = aws_bedrockagent_agent_version.mrbeefy.version
+  lifecycle {
+    ignore_changes = [ routing_configuration ]
   }
 }
 
