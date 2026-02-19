@@ -44,7 +44,7 @@ jobs:
       run: zip -r dist.zip dist
 
     # -----------------------------
-    # Terraform Deploy (Main)
+    # Terraform Deploy (create/update DRAFT)
     # -----------------------------
     - name: Install Terraform
       uses: hashicorp/setup-terraform@v3
@@ -53,12 +53,12 @@ jobs:
       working-directory: infra
       run: terraform init -upgrade
 
-    - name: Terraform Apply (main)
+    - name: Terraform Apply (create/update DRAFT)
       working-directory: infra
       run: terraform apply -auto-approve
 
     # -----------------------------
-    # Capture Terraform Outputs
+    # Capture Terraform Outputs (after first apply)
     # -----------------------------
     - name: Capture Terraform Outputs
       id: tfout
@@ -70,7 +70,7 @@ jobs:
         echo "alias_id=$(terraform output -raw agent_alias_id)" >> $GITHUB_OUTPUT
 
     # -----------------------------
-    # Install AWS CLI v2
+    # Install AWS CLI v2 (must be before any aws CLI calls)
     # -----------------------------
     - name: Install AWS CLI v2 (latest)
       run: |
@@ -106,21 +106,9 @@ jobs:
         ./ingest.ps1 -KbId $KB_ID
 
     # -----------------------------
-    # PUBLISH NEW AGENT VERSION  <<<<<< REQUIRED
+    # Associate KB with Agent (attach to DRAFT)
     # -----------------------------
-    - name: Publish Agent Version
-      id: publish
-      run: |
-        VERSION=$(aws bedrock-agent publish-agent-version \
-          --agent-id ${{ steps.tfout.outputs.agent_id }} \
-          --query "agentVersion.version" \
-          --output text)
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-    # -----------------------------
-    # Associate KB with Agent VERSION  <<<<<< FIXED
-    # -----------------------------
-    - name: Associate KB with Agent
+    - name: Associate KB with Agent (DRAFT)
       working-directory: infra/cli
       shell: pwsh
       run: |
@@ -136,14 +124,12 @@ jobs:
         ./associate_kb.ps1 `
           -AgentId "${{ steps.tfout.outputs.agent_id }}" `
           -KbId $KB_ID `
-          -AgentVersion "${{ steps.publish.outputs.version }}"
+          -AgentVersion "DRAFT"
 
     # -----------------------------
-    # UPDATE ALIAS TO NEW VERSION  <<<<<< REQUIRED
+    # Terraform Apply again to publish version and update alias
+    # (requires aws_bedrockagent_agent_version + alias routing in your .tf)
     # -----------------------------
-    - name: Update Agent Alias
-      run: |
-        aws bedrock-agent update-agent-alias \
-          --agent-id ${{ steps.tfout.outputs.agent_id }} \
-          --agent-alias-id ${{ steps.tfout.outputs.alias_id }} \
-          --routing-configuration "[{\"agentVersion\":\"${{ steps.publish.outputs.version }}\"}]"
+    - name: Terraform Apply (publish version + update alias)
+      working-directory: infra
+      run: terraform apply -auto-approve
