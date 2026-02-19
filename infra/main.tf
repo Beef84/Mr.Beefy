@@ -246,7 +246,7 @@ resource "aws_lambda_function" "api" {
   environment {
     variables = {
       AGENT_ID       = aws_bedrockagent_agent.mrbeefy.id
-      AGENT_ALIAS_ID = aws_bedrockagent_agent_alias.mrbeefy_prod.id
+      AGENT_ALIAS_ID = aws_bedrockagent_agent_alias.mrbeefy_prod.agent_alias_id
     }
   }
 }
