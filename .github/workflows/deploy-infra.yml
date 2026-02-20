@@ -132,6 +132,33 @@ jobs:
           -KbId $KB_ID `
           -AgentVersion "DRAFT"
 
+
+    # -----------------------------
+    # Install latest boto3 and cli
+    # -----------------------------
+    - name: Ensure latest awscli and boto3
+      run: |
+        python -m pip install --upgrade pip
+        pip install --upgrade boto3 botocore
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+        unzip -q awscliv2.zip
+        sudo ./aws/install --update
+        echo "/usr/local/bin" >> $GITHUB_PATH
+        aws --version
+        python -c "import boto3,botocore; print('boto3',boto3.__version__,'botocore',botocore.__version__)"
+
+
+    # -----------------------------
+    # Fail fast if subcommands are not available
+    # -----------------------------
+    - name: Check AWS CLI bedrock-agent support
+      run: |
+        if ! aws bedrock-agent help >/dev/null 2>&1; then
+          echo "aws bedrock-agent subcommands not available; upgrade AWS CLI or install a newer runner image."
+          aws --version
+          exit 1
+        fi
+
     # -----------------------------
     # Publish Agent Version and Capture Published Version
     # (attempt CLI publish; fail fast if not available so we can surface upgrade step)
@@ -152,9 +179,26 @@ jobs:
         }
 
         Write-Host "Attempting to publish via AWS CLI..."
-        $publishOut = aws bedrock-agent publish-agent-version --region $env:AWS_REGION --agent-id $env:AGENT_ID --output json 2>&1
+
+        # Retry loop for publish (3 attempts, exponential backoff)
+        $maxAttempts = 3
+        $publishOut = ""
+        for ($i = 1; $i -le $maxAttempts; $i++) {
+          $publishOut = aws bedrock-agent publish-agent-version --region $env:AWS_REGION --agent-id $env:AGENT_ID --output json 2>&1
+          if ($LASTEXITCODE -eq 0) {
+            break
+          }
+          Write-Host "Publish attempt $i failed. CLI output:"
+          Write-Host $publishOut
+          if ($i -lt $maxAttempts) {
+            $sleep = 5 * $i
+            Write-Host "Retrying in $sleep seconds..."
+            Start-Sleep -Seconds $sleep
+          }
+        }
+
         if ($LASTEXITCODE -ne 0) {
-          Write-Error "AWS CLI publish failed or 'publish-agent-version' not available. CLI output:"
+          Write-Error "AWS CLI publish failed after $maxAttempts attempts or 'publish-agent-version' not available. CLI output:"
           Write-Host $publishOut
           Write-Error "If the CLI lacks the command, ensure you installed a CLI version that includes Bedrock Agent subcommands or upgrade boto3/botocore in CI."
           exit 1

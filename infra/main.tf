@@ -134,7 +134,7 @@ resource "aws_iam_role_policy" "agent_execution_policy" {
           "bedrock:Retrieve",
           "bedrock:RetrieveAndGenerate"
         ]
-        Resource = "arn:aws:bedrock:us-east-1:202720549329:knowledge-base/*"
+        Resource = "arn:aws:bedrock:us-east-1:${data.aws_caller_identity.current.account_id}:knowledge-base/*"
       },
 
       # Allow the agent to read from your KB S3 bucket
@@ -143,14 +143,14 @@ resource "aws_iam_role_policy" "agent_execution_policy" {
         Action = [
           "s3:ListBucket"
         ]
-        Resource = "arn:aws:s3:::mrbeefy-knowledge-base"
+        Resource = aws_s3_bucket.knowledge.arn
       },
       {
         Effect = "Allow"
         Action = [
           "s3:GetObject"
         ]
-        Resource = "arn:aws:s3:::mrbeefy-knowledge-base/*"
+        Resource = "${aws_s3_bucket.knowledge.arn}/*"
       }
     ]
   })
@@ -193,14 +193,15 @@ variable "agent_version" {
 
 # Agent alias
 resource "aws_bedrockagent_agent_alias" "mrbeefy_prod" {
-  count            = var.agent_version != "" ? 1 : 0
+  for_each         = var.agent_version != "" ? { prod = var.agent_version } : {}
   agent_id         = aws_bedrockagent_agent.mrbeefy.id
   agent_alias_name = "prod"
 
   routing_configuration {
-    agent_version = var.agent_version
+    agent_version = each.value
   }
 }
+
 # Lambda role
 resource "aws_iam_role" "lambda_role" {
   name = "mrbeefy-lambda-role"
@@ -256,8 +257,7 @@ resource "aws_lambda_function" "api" {
   environment {
     variables = {
       AGENT_ID       = aws_bedrockagent_agent.mrbeefy.id
-      AGENT_ALIAS_ID = aws_bedrockagent_agent_alias.mrbeefy_prod.agent_alias_id
-    }
+      AGENT_ALIAS_ID = try(aws_bedrockagent_agent_alias.mrbeefy_prod["prod"].id, "")    }
   }
 }
 
