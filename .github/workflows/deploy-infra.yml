@@ -76,15 +76,40 @@ jobs:
         echo "alias_id=${{ steps.tfout.outputs.alias_id }}"
 
     # -----------------------------
-    # Install AWS CLI v2 (must be before any aws CLI calls)
+    # Install latest boto3 and cli
     # -----------------------------
-    - name: Install AWS CLI v2 (latest)
+    - name: Ensure awscli v2 and latest boto3
       run: |
+        set -e
+
+        # remove any previous partial install to avoid interactive prompts
+        rm -rf aws awscliv2.zip
+
+        # upgrade Python SDKs so boto3/botocore include Bedrock Agent operations if available
+        python -m pip install --upgrade pip
+        pip install --upgrade boto3 botocore
+
+        # download and extract non-interactively (overwrite if files exist)
         curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-        unzip -q awscliv2.zip
+        unzip -o -q awscliv2.zip
+
+        # install or update the CLI
         sudo ./aws/install --update
+
+        # ensure new aws is on PATH for the rest of the job
         echo "/usr/local/bin" >> $GITHUB_PATH
+
+        # sanity checks
         aws --version
+        python -c "import boto3,botocore; print('boto3',boto3.__version__,'botocore',botocore.__version__)"
+
+        # verify bedrock-agent subcommands exist; fail fast with a clear message if not
+        if ! aws bedrock-agent help >/dev/null 2>&1; then
+          echo "ERROR: aws bedrock-agent subcommands not available in this CLI build."
+          echo "Ensure the runner image or the installed AWS CLI includes Bedrock Agent support."
+          aws --version
+          exit 1
+        fi
 
     # -----------------------------
     # Upload Knowledge Files to S3
@@ -147,6 +172,17 @@ jobs:
         aws --version
         python -c "import boto3,botocore; print('boto3',boto3.__version__,'botocore',botocore.__version__)"
 
+
+    # -----------------------------
+    # Fail fast if subcommands are not available
+    # -----------------------------
+    - name: Check AWS CLI bedrock-agent support
+      run: |
+        if ! aws bedrock-agent help >/dev/null 2>&1; then
+          echo "aws bedrock-agent subcommands not available; upgrade AWS CLI or install a newer runner image."
+          aws --version
+          exit 1
+        fi
 
     # -----------------------------
     # Fail fast if subcommands are not available
