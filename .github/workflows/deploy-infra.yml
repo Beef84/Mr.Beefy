@@ -69,6 +69,12 @@ jobs:
         echo "agent_id=$(terraform output -raw agent_id)" >> $GITHUB_OUTPUT
         echo "alias_id=$(terraform output -raw agent_alias_id)" >> $GITHUB_OUTPUT
 
+    - name: Debug Terraform outputs
+      run: |
+        echo "bucket=${{ steps.tfout.outputs.bucket }}"
+        echo "agent_id=${{ steps.tfout.outputs.agent_id }}"
+        echo "alias_id=${{ steps.tfout.outputs.alias_id }}"
+
     # -----------------------------
     # Install AWS CLI v2 (must be before any aws CLI calls)
     # -----------------------------
@@ -127,63 +133,53 @@ jobs:
           -AgentVersion "DRAFT"
 
     # -----------------------------
-    # Ensure Python boto3 is available (CI only)
+    # Publish Agent Version and Capture Published Version
+    # (attempt CLI publish; fail fast if not available so we can surface upgrade step)
     # -----------------------------
-    - name: Ensure latest boto3/botocore
-      shell: pwsh
-      working-directory: infra/cli
-      run: |
-        python -m pip install --upgrade pip
-        pip install --upgrade boto3 botocore
-        python -c "import boto3,botocore; print('boto3',boto3.__version__,'botocore',botocore.__version__)"
-
-    # -----------------------------
-    # Publish Agent Version and Update Alias (CLI first, then SDK fallback)
-    # -----------------------------
-    - name: Publish Agent Version and Update Alias (CLI first, then Python script)
+    - name: Publish Agent Version and Capture
+      id: publish
       shell: pwsh
       working-directory: infra/cli
       env:
         AWS_REGION: us-east-1
         AGENT_ID: ${{ steps.tfout.outputs.agent_id }}
-        ALIAS_ID: ${{ steps.tfout.outputs.alias_id }}
       run: |
         $ErrorActionPreference = "Stop"
 
-        if (-not $env:AGENT_ID -or -not $env:ALIAS_ID) {
-          Write-Error "Missing agent_id or alias_id from Terraform outputs."
+        if (-not $env:AGENT_ID) {
+          Write-Error "Missing agent_id from Terraform outputs."
           exit 1
         }
 
-        # Normalize alias id (if TF returned a comma list, pick the first)
-        $aliasId = $env:ALIAS_ID.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" } | Select-Object -First 1
-        Write-Host "Using AgentId: $($env:AGENT_ID)"
-        Write-Host "Using AliasId: $aliasId"
-
-        Write-Host "Attempting to publish via AWS CLI (preferred)..."
-        $publishJson = aws bedrock-agent publish-agent-version --region $env:AWS_REGION --agent-id $env:AGENT_ID --output json 2>&1
-        if ($LASTEXITCODE -eq 0) {
-          $pub = $publishJson | ConvertFrom-Json
-          $version = $pub.agentVersion.version
-          if (-not $version) { Write-Host "CLI publish returned no version; falling back to Python script"; }
-          else {
-            Write-Host "Published version (CLI): $version"
-            $routingJson = @{ agentVersion = "$version" } | ConvertTo-Json -Compress
-            aws bedrock-agent update-agent-alias --region $env:AWS_REGION --agent-id $env:AGENT_ID --agent-alias-id $aliasId --routing-configuration $routingJson
-            if ($LASTEXITCODE -ne 0) { Write-Host "CLI update-agent-alias failed; falling back to Python script" }
-            else { Write-Host "Alias updated to version $version (via CLI)."; exit 0 }
-          }
-        } else {
-          Write-Host "AWS CLI publish not available or failed; falling back to Python script."
+        Write-Host "Attempting to publish via AWS CLI..."
+        $publishOut = aws bedrock-agent publish-agent-version --region $env:AWS_REGION --agent-id $env:AGENT_ID --output json 2>&1
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error "AWS CLI publish failed or 'publish-agent-version' not available. CLI output:"
+          Write-Host $publishOut
+          Write-Error "If the CLI lacks the command, ensure you installed a CLI version that includes Bedrock Agent subcommands or upgrade boto3/botocore in CI."
+          exit 1
         }
 
-        # Fallback: run committed Python script (boto3 must be installed)
-        Write-Host "Running python publish_and_update.py $env:AGENT_ID $aliasId $env:AWS_REGION"
-        python publish_and_update.py $env:AGENT_ID $aliasId $env:AWS_REGION
-        $exit = $LASTEXITCODE
-        if ($exit -ne 0) {
-          Write-Error "Publish/update failed (exit $exit)."
-          exit $exit
+        $pub = $publishOut | ConvertFrom-Json
+        $version = $pub.agentVersion.version
+        if (-not $version) {
+          Write-Error "Publish returned no version. Raw output:"
+          Write-Host $publishOut
+          exit 1
         }
-        # Print result (script prints JSON)
-        exit 0
+
+        Write-Host "Published version: $version"
+        echo "published_version=$version" >> $GITHUB_OUTPUT
+
+    # -----------------------------
+    # Terraform Apply again to create alias with published version
+    # (Terraform must use conditional alias: var.agent_version)
+    # -----------------------------
+    - name: Terraform Apply (create alias with published version)
+      working-directory: infra
+      run: |
+        if [ -z "${{ steps.publish.outputs.published_version }}" ]; then
+          echo "No published_version found; aborting."
+          exit 1
+        fi
+        terraform apply -var="agent_version=${{ steps.publish.outputs.published_version }}" -auto-approve

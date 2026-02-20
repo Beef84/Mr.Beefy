@@ -185,16 +185,22 @@ ACTION RULES:
 EOF
 }
 
+variable "agent_version" {
+  description = "Published agent version to route alias to. Set by CI after publishing DRAFT."
+  type        = string
+  default     = ""
+}
+
 # Agent alias
 resource "aws_bedrockagent_agent_alias" "mrbeefy_prod" {
+  count            = var.agent_version != "" ? 1 : 0
   agent_id         = aws_bedrockagent_agent.mrbeefy.id
   agent_alias_name = "prod"
 
-  lifecycle {
-    ignore_changes = [ routing_configuration ]
+  routing_configuration {
+    agent_version = var.agent_version
   }
 }
-
 # Lambda role
 resource "aws_iam_role" "lambda_role" {
   name = "mrbeefy-lambda-role"
