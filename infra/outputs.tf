@@ -11,7 +11,8 @@ output "agent_id" {
 }
 
 output "agent_alias_id" {
-  value = aws_bedrockagent_agent_alias.mrbeefy_prod.id
+  value       = length(aws_bedrockagent_agent_alias.mrbeefy_prod) > 0 ? aws_bedrockagent_agent_alias.mrbeefy_prod[0].id : ""
+  description = "Alias id (empty if alias not created yet)"
 }
 
 output "api_url" {
