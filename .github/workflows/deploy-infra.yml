@@ -85,7 +85,7 @@ jobs:
         # remove any previous partial install to avoid interactive prompts
         rm -rf aws awscliv2.zip
 
-        # upgrade Python SDKs so boto3/botocore include Bedrock Agent operations if available
+        # upgrade Python SDKs (optional but recommended)
         python -m pip install --upgrade pip
         pip install --upgrade boto3 botocore
 
@@ -93,7 +93,7 @@ jobs:
         curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
         unzip -o -q awscliv2.zip
 
-        # install or update the CLI
+        # run installer (update if already installed)
         sudo ./aws/install --update
 
         # ensure new aws is on PATH for the rest of the job
@@ -103,10 +103,9 @@ jobs:
         aws --version
         python -c "import boto3,botocore; print('boto3',boto3.__version__,'botocore',botocore.__version__)"
 
-        # verify bedrock-agent subcommands exist; fail fast with a clear message if not
+        # verify bedrock-agent subcommands exist; fail with clear message if not
         if ! aws bedrock-agent help >/dev/null 2>&1; then
           echo "ERROR: aws bedrock-agent subcommands not available in this CLI build."
-          echo "Ensure the runner image or the installed AWS CLI includes Bedrock Agent support."
           aws --version
           exit 1
         fi
