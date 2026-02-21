@@ -3,9 +3,10 @@ import {
     InvokeAgentCommand
 } from "@aws-sdk/client-bedrock-agent-runtime";
 
-// *** CRITICAL FIX: force correct region ***
+// Explicit region is REQUIRED for Bedrock Agent Runtime.
+// Never rely on implicit region resolution inside Lambda.
 const client = new BedrockAgentRuntimeClient({
-    region: "us-east-1"
+    region: process.env.AWS_REGION || "us-east-1"
 });
 
 export const handler = async (event: any) => {
@@ -17,16 +18,14 @@ export const handler = async (event: any) => {
             ? JSON.parse(event.body)
             : event.body || {};
 
-    console.log("Parsed body:", body);
-
     const inputText = body.input ?? "Hello, Mr. Beefy";
-    console.log("Input text:", inputText);
 
     const agentId = process.env.AGENT_ID;
     const aliasId = process.env.AGENT_ALIAS_ID;
 
     console.log("Agent ID:", agentId);
     console.log("Alias ID:", aliasId);
+    console.log("Input text:", inputText);
 
     try {
         const command = new InvokeAgentCommand({
