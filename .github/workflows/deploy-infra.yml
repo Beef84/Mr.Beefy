@@ -125,49 +125,28 @@ jobs:
     # -----------------------------
     # Create or Update Alias (THIS IS THE PUBLISH)
     # -----------------------------
-    - name: Create or Update Agent Alias
-      id: alias
+    - name: Create Alias from Draft (force)
+      id: create_alias_from_draft
       shell: bash
       env:
         AGENT_ID: ${{ steps.tfout.outputs.agent_id }}
-        ALIAS_ID: ${{ steps.tfout.outputs.alias_id }}
+        ALIAS_NAME: prod
+        AWS_REGION: us-east-1
       run: |
-        set -e
+        set -euo pipefail
 
-        echo "Fetching latest agent version using get-agent..."
-        LATEST_VERSION=$(aws bedrock-agent get-agent \
+        AGENT_ID="${AGENT_ID:?}"
+        ALIAS_NAME="${ALIAS_NAME:?}"
+        REGION="${AWS_REGION:-us-east-1}"
+
+        aws bedrock-agent create-agent-alias \
           --agent-id "$AGENT_ID" \
-          --query "agent.latestAgentVersion" \
-          --output text)
+          --agent-alias-name "$ALIAS_NAME" \
+          --routing-configuration agentVersion="DRAFT" \
+          --region "$REGION" \
+          --output json > alias.json
 
-        if [ -z "$LATEST_VERSION" ] || [ "$LATEST_VERSION" = "None" ]; then
-          echo "ERROR: Agent exists but no version is returned by AWS. Cannot create alias."
-          exit 1
-        fi
-
-        echo "Latest version is: $LATEST_VERSION"
-
-        if [ -z "$ALIAS_ID" ]; then
-          echo "Alias does not exist. Creating alias 'prod' pointing to version $LATEST_VERSION..."
-          aws bedrock-agent create-agent-alias \
-            --agent-id "$AGENT_ID" \
-            --agent-alias-name "prod" \
-            --routing-configuration agentVersion="$LATEST_VERSION" \
-            --region us-east-1 \
-            --output json > alias.json
-
-          echo "alias_id=$(jq -r '.agentAlias.agentAliasId' alias.json)" >> $GITHUB_OUTPUT
-        else
-          echo "Alias exists. Updating alias $ALIAS_ID to version $LATEST_VERSION..."
-          aws bedrock-agent update-agent-alias \
-            --agent-id "$AGENT_ID" \
-            --agent-alias-id "$ALIAS_ID" \
-            --routing-configuration agentVersion="$LATEST_VERSION" \
-            --region us-east-1 \
-            --output json > alias.json
-
-          echo "alias_id=$ALIAS_ID" >> $GITHUB_OUTPUT
-        fi
+        echo "alias_id=$(jq -r '.agentAlias.agentAliasId' alias.json)" >> $GITHUB_OUTPUT
 
     # -----------------------------
     # DONE — no second apply needed
