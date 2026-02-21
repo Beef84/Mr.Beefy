@@ -18,6 +18,9 @@ def fail(msg, **fields):
     sys.exit(1)
 
 def main():
+    # -----------------------------
+    # Read environment
+    # -----------------------------
     agent_id = os.environ.get("AGENT_ID")
     alias_id = os.environ.get("ALIAS_ID") or ""
     region = os.environ.get("AWS_REGION", "us-east-1")
@@ -46,7 +49,15 @@ def main():
                 fail("Publish failed after retries", last_exception=str(e))
             time.sleep(5 * attempt)
 
-    version = resp.get("agentVersion", {}).get("version")
+    # -----------------------------
+    # Extract version
+    # -----------------------------
+    version = None
+    try:
+        version = resp.get("agentVersion", {}).get("version")
+    except Exception as e:
+        fail("Failed to extract version from publish response", exception=str(e), raw_response=resp)
+
     if not version:
         fail("Publish returned no version", raw_response=resp)
 
