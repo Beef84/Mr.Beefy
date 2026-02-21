@@ -156,7 +156,7 @@ resource "aws_iam_role_policy" "agent_execution_policy" {
   })
 }
 
-# Bedrock Agent
+# Bedrock Agent (DRAFT)
 resource "aws_bedrockagent_agent" "mrbeefy" {
   agent_name              = "mrbeefy-agent"
   foundation_model        = "amazon.nova-pro-v1:0"
@@ -185,22 +185,13 @@ ACTION RULES:
 EOF
 }
 
-variable "agent_version" {
-  description = "Published agent version to route alias to. Set by CI after publishing DRAFT."
-  type        = string
-  default     = ""
-}
-
-# Agent alias
-resource "aws_bedrockagent_agent_alias" "mrbeefy_prod" {
-  for_each         = var.agent_version != "" ? { prod = var.agent_version } : {}
-  agent_id         = aws_bedrockagent_agent.mrbeefy.id
-  agent_alias_name = "prod"
-
-  routing_configuration {
-    agent_version = each.value
-  }
-}
+# NOTE: alias is now CI-owned; Terraform does NOT create it.
+# If you want Terraform to *read* an existing alias, you can add:
+#
+# data "aws_bedrockagent_agent_alias" "mrbeefy_prod" {
+#   agent_id         = aws_bedrockagent_agent.mrbeefy.id
+#   agent_alias_name = "prod"
+# }
 
 # Lambda role
 resource "aws_iam_role" "lambda_role" {
@@ -254,10 +245,12 @@ resource "aws_lambda_function" "api" {
   filename         = "${path.module}/lambda/dist.zip"
   source_code_hash = filebase64sha256("${path.module}/lambda/dist.zip")
 
+  # Alias ID will be injected/updated by CI via aws lambda update-function-configuration
   environment {
     variables = {
       AGENT_ID       = aws_bedrockagent_agent.mrbeefy.id
-      AGENT_ALIAS_ID = try(aws_bedrockagent_agent_alias.mrbeefy_prod["prod"].id, "")    }
+      AGENT_ALIAS_ID = "" # placeholder; CI overwrites with real alias ID
+    }
   }
 }
 
@@ -287,7 +280,6 @@ resource "aws_apigatewayv2_route" "post_chat" {
   depends_on = [
     aws_apigatewayv2_integration.lambda_integration
   ]
-
 }
 
 resource "aws_apigatewayv2_stage" "prod" {

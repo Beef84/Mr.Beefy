@@ -183,6 +183,15 @@ jobs:
         echo "alias_id=$NEW_ALIAS_ID" >> $GITHUB_OUTPUT
 
     # -----------------------------
+    # Update Lambda env with agent + alias IDs
+    # -----------------------------
+    - name: Update Lambda Environment Variables
+      run: |
+        aws lambda update-function-configuration \
+          --function-name mrbeefy-api \
+          --environment "Variables={AGENT_ID=${{ steps.tfout.outputs.agent_id }},AGENT_ALIAS_ID=${{ steps.create_or_update_alias.outputs.alias_id }}}"
+
+    # -----------------------------
     # DONE — no second apply needed
     # -----------------------------
     - name: Deployment Complete

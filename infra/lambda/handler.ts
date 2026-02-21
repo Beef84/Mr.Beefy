@@ -3,33 +3,79 @@ import {
     InvokeAgentCommand
 } from "@aws-sdk/client-bedrock-agent-runtime";
 
-const client = new BedrockAgentRuntimeClient({});
+// *** CRITICAL FIX: force correct region ***
+const client = new BedrockAgentRuntimeClient({
+    region: "us-east-1"
+});
 
 export const handler = async (event: any) => {
-    const body = typeof event.body === "string" ? JSON.parse(event.body) : event.body || {};
-    const inputText = body.input ?? "Hello, Mr. Beefy";   // MATCHES FRONTEND NOW
+    console.log("=== Incoming Event ===");
+    console.log(JSON.stringify(event, null, 2));
 
-    const command = new InvokeAgentCommand({
-        agentId: process.env.AGENT_ID!,
-        agentAliasId: process.env.AGENT_ALIAS_ID!,
-        sessionId: "web-" + Date.now().toString(),
-        inputText
-    });
+    const body =
+        typeof event.body === "string"
+            ? JSON.parse(event.body)
+            : event.body || {};
 
-    const response = await client.send(command);
+    console.log("Parsed body:", body);
 
-    let text = "";
-    if (response.completion) {
-        for await (const chunk of response.completion) {
-            if (chunk.chunk?.bytes) {
-                text += new TextDecoder().decode(chunk.chunk.bytes);
+    const inputText = body.input ?? "Hello, Mr. Beefy";
+    console.log("Input text:", inputText);
+
+    const agentId = process.env.AGENT_ID;
+    const aliasId = process.env.AGENT_ALIAS_ID;
+
+    console.log("Agent ID:", agentId);
+    console.log("Alias ID:", aliasId);
+
+    try {
+        const command = new InvokeAgentCommand({
+            agentId,
+            agentAliasId: aliasId,
+            sessionId: "web-" + Date.now().toString(),
+            inputText
+        });
+
+        console.log("Sending InvokeAgentCommand:", {
+            agentId,
+            aliasId,
+            inputText
+        });
+
+        const response = await client.send(command);
+
+        console.log("Raw Bedrock response:", response);
+
+        let text = "";
+        if (response.completion) {
+            for await (const chunk of response.completion) {
+                if (chunk.chunk?.bytes) {
+                    const decoded = new TextDecoder().decode(chunk.chunk.bytes);
+                    console.log("Chunk:", decoded);
+                    text += decoded;
+                }
             }
         }
-    }
 
-    return {
-        statusCode: 200,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reply: text })   // MATCHES FRONTEND NOW
-    };
+        console.log("Final assembled text:", text);
+
+        return {
+            statusCode: 200,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reply: text })
+        };
+
+    } catch (err: any) {
+        console.error("=== ERROR invoking Bedrock Agent ===");
+        console.error(err);
+
+        return {
+            statusCode: 500,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                error: "Bedrock invocation failed",
+                details: err.message || String(err)
+            })
+        };
+    }
 };
