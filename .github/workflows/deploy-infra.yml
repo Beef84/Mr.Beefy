@@ -125,35 +125,42 @@ jobs:
     # -----------------------------
     # Create or Update Alias (THIS IS THE PUBLISH)
     # -----------------------------
-    - name: Create or Update Alias
+    - name: Create or Update Agent Alias
       id: alias
-      shell: pwsh
+      shell: bash
       env:
         AGENT_ID: ${{ steps.tfout.outputs.agent_id }}
         ALIAS_ID: ${{ steps.tfout.outputs.alias_id }}
+        AGENT_VERSION: ${{ steps.tfout.outputs.agent_version }}   # must be a REAL version
       run: |
-        $ErrorActionPreference = "Stop"
+        set -e
 
-        if (-not $env:ALIAS_ID) {
-          Write-Host "Alias does not exist. Creating alias from DRAFT..."
-          $out = aws bedrock-agent create-agent-alias `
-            --agent-id $env:AGENT_ID `
-            --agent-alias-name prod `
-            --routing-configuration agentVersion=DRAFT `
-            --output json
-        }
-        else {
-          Write-Host "Alias exists. Updating alias from DRAFT..."
-          $out = aws bedrock-agent update-agent-alias `
-            --agent-id $env:AGENT_ID `
-            --agent-alias-id $env:ALIAS_ID `
-            --routing-configuration agentVersion=DRAFT `
-            --output json
-        }
+        if [ -z "$AGENT_VERSION" ]; then
+          echo "ERROR: Terraform must output a real agent_version (e.g., 1, 2, 3)."
+          exit 1
+        fi
 
-        $json = $out | ConvertFrom-Json
-        $aliasId = $json.agentAlias.agentAliasId
-        echo "alias_id=$aliasId" >> $GITHUB_OUTPUT
+        if [ -z "$ALIAS_ID" ]; then
+          echo "Alias does not exist. Creating alias 'prod' pointing to version $AGENT_VERSION..."
+          aws bedrock-agent create-agent-alias \
+            --agent-id "$AGENT_ID" \
+            --agent-alias-name "prod" \
+            --routing-configuration agentVersion="$AGENT_VERSION" \
+            --region us-east-1 \
+            --output json > alias.json
+
+          echo "alias_id=$(jq -r '.agentAlias.agentAliasId' alias.json)" >> $GITHUB_OUTPUT
+        else
+          echo "Alias exists. Updating alias $ALIAS_ID to version $AGENT_VERSION..."
+          aws bedrock-agent update-agent-alias \
+            --agent-id "$AGENT_ID" \
+            --agent-alias-id "$ALIAS_ID" \
+            --routing-configuration agentVersion="$AGENT_VERSION" \
+            --region us-east-1 \
+            --output json > alias.json
+
+          echo "alias_id=$ALIAS_ID" >> $GITHUB_OUTPUT
+        fi
 
     # -----------------------------
     # DONE — no second apply needed
