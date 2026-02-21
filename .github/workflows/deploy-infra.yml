@@ -58,60 +58,31 @@ jobs:
       run: terraform apply -auto-approve
 
     # -----------------------------
-    # Capture Terraform Outputs (after first apply)
+    # Capture Terraform Outputs
     # -----------------------------
     - name: Capture Terraform Outputs
       id: tfout
       working-directory: infra
       run: |
         echo "bucket=$(terraform output -raw knowledge_bucket)" >> $GITHUB_OUTPUT
-        echo "kb_role=$(terraform output -raw kb_role_arn)" >> $GITHUB_OUTPUT
         echo "agent_id=$(terraform output -raw agent_id)" >> $GITHUB_OUTPUT
         echo "alias_id=$(terraform output -raw agent_alias_id)" >> $GITHUB_OUTPUT
 
-    - name: Debug Terraform outputs
-      run: |
-        echo "bucket=${{ steps.tfout.outputs.bucket }}"
-        echo "agent_id=${{ steps.tfout.outputs.agent_id }}"
-        echo "alias_id=${{ steps.tfout.outputs.alias_id }}"
-
     # -----------------------------
-    # Install latest boto3 and cli
+    # Ensure AWS CLI v2
     # -----------------------------
-    - name: Ensure awscli v2 and latest boto3
+    - name: Ensure awscli v2
       run: |
         set -e
-
-        # remove any previous partial install to avoid interactive prompts
         rm -rf aws awscliv2.zip
-
-        # upgrade Python SDKs (optional but recommended)
-        python -m pip install --upgrade pip
-        pip install --upgrade boto3 botocore
-
-        # download and extract non-interactively (overwrite if files exist)
         curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
         unzip -o -q awscliv2.zip
-
-        # run installer (update if already installed)
         sudo ./aws/install --update
-
-        # ensure new aws is on PATH for the rest of the job
         echo "/usr/local/bin" >> $GITHUB_PATH
-
-        # sanity checks
         aws --version
-        python -c "import boto3,botocore; print('boto3',boto3.__version__,'botocore',botocore.__version__)"
-
-        # verify bedrock-agent subcommands exist; fail with clear message if not
-        if ! aws bedrock-agent help >/dev/null 2>&1; then
-          echo "ERROR: aws bedrock-agent subcommands not available in this CLI build."
-          aws --version
-          exit 1
-        fi
 
     # -----------------------------
-    # Upload Knowledge Files to S3
+    # Upload Knowledge Files
     # -----------------------------
     - name: Upload Knowledge Files
       run: |
@@ -129,14 +100,14 @@ jobs:
           --output text
 
         if (-not $KB_ID -or $KB_ID -eq "None") {
-            Write-Error "Knowledge Base 'mrbeefy-kb' not found. Check the KB name."
+            Write-Error "Knowledge Base 'mrbeefy-kb' not found."
             exit 1
         }
 
         ./ingest.ps1 -KbId $KB_ID
 
     # -----------------------------
-    # Associate KB with Agent (attach to DRAFT)
+    # Associate KB with Agent (DRAFT)
     # -----------------------------
     - name: Associate KB with Agent (DRAFT)
       working-directory: infra/cli
@@ -146,79 +117,46 @@ jobs:
           --query "knowledgeBaseSummaries[?name=='mrbeefy-kb'] | [0].knowledgeBaseId" `
           --output text
 
-        if (-not $KB_ID -or $KB_ID -eq "None") {
-            Write-Error "Knowledge Base 'mrbeefy-kb' not found. Check the KB name."
-            exit 1
-        }
-
         ./associate_kb.ps1 `
           -AgentId "${{ steps.tfout.outputs.agent_id }}" `
           -KbId $KB_ID `
           -AgentVersion "DRAFT"
 
-
-
     # -----------------------------
-    # Fail fast if subcommands are not available
+    # Create or Update Alias (THIS IS THE PUBLISH)
     # -----------------------------
-    - name: Check AWS CLI bedrock-agent support
-      run: |
-        if ! aws bedrock-agent help >/dev/null 2>&1; then
-          echo "aws bedrock-agent subcommands not available; upgrade AWS CLI or install a newer runner image."
-          aws --version
-          exit 1
-        fi
-
-    # -----------------------------
-    # Publish Agent Version and Capture Published Version
-    # (attempt CLI publish; fail fast if not available so we can surface upgrade step)
-    # -----------------------------
-    - name: Publish Agent Version via boto3
-      id: publish
+    - name: Create or Update Alias
+      id: alias
       shell: pwsh
-      working-directory: infra/sdk
       env:
-        AWS_REGION: us-east-1
         AGENT_ID: ${{ steps.tfout.outputs.agent_id }}
-        ALIAS_ID: ${{ steps.tfout.outputs.agent_alias_id }}
+        ALIAS_ID: ${{ steps.tfout.outputs.alias_id }}
       run: |
         $ErrorActionPreference = "Stop"
 
-        if (-not $env:AGENT_ID) {
-          Write-Error "Missing agent_id from Terraform outputs."
-          exit 1
+        if (-not $env:ALIAS_ID) {
+          Write-Host "Alias does not exist. Creating alias from DRAFT..."
+          $out = aws bedrock-agent create-agent-alias `
+            --agent-id $env:AGENT_ID `
+            --agent-alias-name prod `
+            --routing-configuration agentVersion=DRAFT `
+            --output json
+        }
+        else {
+          Write-Host "Alias exists. Updating alias from DRAFT..."
+          $out = aws bedrock-agent update-agent-alias `
+            --agent-id $env:AGENT_ID `
+            --agent-alias-id $env:ALIAS_ID `
+            --routing-configuration agentVersion=DRAFT `
+            --output json
         }
 
-        # Normalize alias id (may be empty)
-        $alias = ""
-        if ($env:ALIAS_ID -and $env:ALIAS_ID -ne "") {
-          $alias = $env:ALIAS_ID.Split(',') |
-            ForEach-Object { $_.Trim() } |
-            Where-Object { $_ -ne "" } |
-            Select-Object -First 1
-          $env:ALIAS_ID = $alias
-        }
-
-        python publish_and_update.py > publish_out.json
-
-        $json = Get-Content publish_out.json -Raw | ConvertFrom-Json
-        if (-not $json.published_version) {
-          Write-Error "Publish failed. Output:"
-          Get-Content publish_out.json
-          exit 1
-        }
-
-        echo "published_version=$($json.published_version)" >> $GITHUB_OUTPUT
+        $json = $out | ConvertFrom-Json
+        $aliasId = $json.agentAlias.agentAliasId
+        echo "alias_id=$aliasId" >> $GITHUB_OUTPUT
 
     # -----------------------------
-    # Terraform Apply again to create alias with published version
-    # (Terraform must use conditional alias: var.agent_version)
+    # DONE — no second apply needed
     # -----------------------------
-    - name: Terraform Apply (create alias with published version)
-      working-directory: infra
-      run: |
-        if [ -z "${{ steps.publish.outputs.published_version }}" ]; then
-          echo "No published_version found; aborting."
-          exit 1
-        fi
-        terraform apply -var="agent_version=${{ steps.publish.outputs.published_version }}" -auto-approve
+    - name: Deployment Complete
+      run: echo "Mr. Beefy deployed successfully via alias-based versioning."
