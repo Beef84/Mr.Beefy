@@ -7,14 +7,14 @@ import os
 import traceback
 
 def log(msg, **fields):
-    """Structured log helper."""
+    """Structured log to stderr only."""
     entry = {"msg": msg, **fields}
-    print(json.dumps(entry))
+    print(json.dumps(entry), file=sys.stderr)
 
 def fail(msg, **fields):
-    """Fail with structured error."""
+    """Fail with structured error to stderr, then exit."""
     entry = {"error": msg, **fields}
-    print(json.dumps(entry))
+    print(json.dumps(entry), file=sys.stderr)
     sys.exit(1)
 
 def main():
@@ -30,18 +30,12 @@ def main():
     if not agent_id:
         fail("Missing AGENT_ID environment variable")
 
-    # -----------------------------
-    # Create client
-    # -----------------------------
     try:
         client = boto3.client("bedrock-agent", region_name=region)
         log("Created boto3 Bedrock Agent client")
     except Exception as e:
         fail("Failed to create boto3 client", exception=str(e), traceback=traceback.format_exc())
 
-    # -----------------------------
-    # Publish with retries
-    # -----------------------------
     resp = None
     for attempt in range(1, 4):
         try:
@@ -74,9 +68,6 @@ def main():
         "publish_response": resp
     }
 
-    # -----------------------------
-    # Update alias (optional)
-    # -----------------------------
     if alias_id:
         try:
             log("Updating alias", alias_id=alias_id, version=version)
@@ -91,11 +82,8 @@ def main():
             log("Alias update failed", exception=str(e), traceback=traceback.format_exc())
             result["alias_update_error"] = str(e)
 
-    # -----------------------------
-    # Final output
-    # -----------------------------
+    # IMPORTANT: Only ONE JSON object printed to stdout
     print(json.dumps(result))
-    sys.exit(0)
 
 if __name__ == "__main__":
     main()
