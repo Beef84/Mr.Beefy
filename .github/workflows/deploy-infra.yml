@@ -131,31 +131,38 @@ jobs:
       env:
         AGENT_ID: ${{ steps.tfout.outputs.agent_id }}
         ALIAS_ID: ${{ steps.tfout.outputs.alias_id }}
-        AGENT_VERSION: ${{ steps.tfout.outputs.agent_version }}   # must be a REAL version
       run: |
         set -e
 
-        if [ -z "$AGENT_VERSION" ]; then
-          echo "ERROR: Terraform must output a real agent_version (e.g., 1, 2, 3)."
+        echo "Fetching latest agent version..."
+        LATEST_VERSION=$(aws bedrock-agent list-agent-versions \
+          --agent-id "$AGENT_ID" \
+          --query "agentVersionSummaries[-1].version" \
+          --output text)
+
+        if [ -z "$LATEST_VERSION" ] || [ "$LATEST_VERSION" = "None" ]; then
+          echo "ERROR: No agent versions exist. Cannot create alias."
           exit 1
         fi
 
+        echo "Latest version is: $LATEST_VERSION"
+
         if [ -z "$ALIAS_ID" ]; then
-          echo "Alias does not exist. Creating alias 'prod' pointing to version $AGENT_VERSION..."
+          echo "Alias does not exist. Creating alias 'prod' pointing to version $LATEST_VERSION..."
           aws bedrock-agent create-agent-alias \
             --agent-id "$AGENT_ID" \
             --agent-alias-name "prod" \
-            --routing-configuration agentVersion="$AGENT_VERSION" \
+            --routing-configuration agentVersion="$LATEST_VERSION" \
             --region us-east-1 \
             --output json > alias.json
 
           echo "alias_id=$(jq -r '.agentAlias.agentAliasId' alias.json)" >> $GITHUB_OUTPUT
         else
-          echo "Alias exists. Updating alias $ALIAS_ID to version $AGENT_VERSION..."
+          echo "Alias exists. Updating alias $ALIAS_ID to version $LATEST_VERSION..."
           aws bedrock-agent update-agent-alias \
             --agent-id "$AGENT_ID" \
             --agent-alias-id "$ALIAS_ID" \
-            --routing-configuration agentVersion="$AGENT_VERSION" \
+            --routing-configuration agentVersion="$LATEST_VERSION" \
             --region us-east-1 \
             --output json > alias.json
 
