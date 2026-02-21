@@ -134,14 +134,14 @@ jobs:
       run: |
         set -e
 
-        echo "Fetching latest agent version..."
-        LATEST_VERSION=$(aws bedrock-agent list-agent-versions \
+        echo "Fetching latest agent version using get-agent..."
+        LATEST_VERSION=$(aws bedrock-agent get-agent \
           --agent-id "$AGENT_ID" \
-          --query "agentVersionSummaries[-1].version" \
+          --query "agent.latestAgentVersion" \
           --output text)
 
         if [ -z "$LATEST_VERSION" ] || [ "$LATEST_VERSION" = "None" ]; then
-          echo "ERROR: No agent versions exist. Cannot create alias."
+          echo "ERROR: Agent exists but no version is returned by AWS. Cannot create alias."
           exit 1
         fi
 
