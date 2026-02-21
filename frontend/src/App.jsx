@@ -18,14 +18,14 @@ function App() {
             const res = await fetch(API_URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ inputText: userMessage.text })
+                body: JSON.stringify({ input: userMessage.text })   // FIXED
             });
 
             const data = await res.json();
 
             const agentMessage = {
                 role: "assistant",
-                text: data.outputText || "(No response)"
+                text: data.reply || "(No response)"                 // FIXED
             };
 
             setMessages((prev) => [...prev, agentMessage]);
@@ -59,7 +59,6 @@ function App() {
                         insights into who I am as an engineer and how I approach building complex systems.
                     </p>
 
-                    {/* --- Chat UI --- */}
                     <div className="chat-box">
                         <div className="messages">
                             {messages.map((m, i) => (

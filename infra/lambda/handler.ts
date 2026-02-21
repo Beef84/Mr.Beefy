@@ -7,7 +7,7 @@ const client = new BedrockAgentRuntimeClient({});
 
 export const handler = async (event: any) => {
     const body = typeof event.body === "string" ? JSON.parse(event.body) : event.body || {};
-    const inputText = body.input ?? "Hello, Mr. Beefy";
+    const inputText = body.input ?? "Hello, Mr. Beefy";   // MATCHES FRONTEND NOW
 
     const command = new InvokeAgentCommand({
         agentId: process.env.AGENT_ID!,
@@ -30,6 +30,6 @@ export const handler = async (event: any) => {
     return {
         statusCode: 200,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reply: text })
+        body: JSON.stringify({ reply: text })   // MATCHES FRONTEND NOW
     };
 };
