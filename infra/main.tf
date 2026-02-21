@@ -242,6 +242,8 @@ resource "aws_lambda_function" "api" {
   handler       = "index.handler"
   runtime       = "nodejs20.x"
 
+  timeout       = 30  # <-- ADD THIS
+
   filename         = "${path.module}/lambda/dist.zip"
   source_code_hash = filebase64sha256("${path.module}/lambda/dist.zip")
 
