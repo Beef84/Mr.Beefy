@@ -125,7 +125,7 @@ jobs:
     # -----------------------------
     # Create or Update Alias (THIS IS THE PUBLISH)
     # -----------------------------
-    - name: Create or Update Alias
+    - name: Create Alias If Missing
       id: create_or_update_alias
       shell: bash
       env:
@@ -144,52 +144,20 @@ jobs:
           --output text 2>/dev/null || true)
 
         #
-        # ───────────────────────────────────────────────────────────────
-        # CASE 1: Alias exists → update routing
-        # ───────────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────
+        # CASE 1: Alias exists → do nothing
+        # ────────────────────────────────────────────────
         #
         if [ -n "$EXISTING_ALIAS_ID" ] && [ "$EXISTING_ALIAS_ID" != "None" ]; then
-          echo "Alias '$ALIAS_NAME' exists with ID: $EXISTING_ALIAS_ID"
-          echo "Checking for latest published version..."
-
-          LATEST_VERSION=$(aws bedrock-agent get-agent \
-            --agent-id "$AGENT_ID" \
-            --region "$AWS_REGION" \
-            --query "agent.latestAgentVersion" \
-            --output text)
-
-          #
-          # If no published version exists, create one from DRAFT
-          #
-          if [ -z "$LATEST_VERSION" ] || [ "$LATEST_VERSION" = "None" ]; then
-            echo "No published version found. Creating a new version from DRAFT..."
-
-            LATEST_VERSION=$(aws bedrock-agent create-agent-version \
-              --agent-id "$AGENT_ID" \
-              --region "$AWS_REGION" \
-              --query "agentVersion.agentVersion" \
-              --output text)
-
-            echo "Created new published version: $LATEST_VERSION"
-          fi
-
-          echo "Updating alias routing to version $LATEST_VERSION..."
-
-          aws bedrock-agent update-agent-alias \
-            --agent-id "$AGENT_ID" \
-            --agent-alias-id "$EXISTING_ALIAS_ID" \
-            --routing-configuration agentVersion="$LATEST_VERSION" \
-            --region "$AWS_REGION" \
-            --output json > alias.json
-
+          echo "Alias '$ALIAS_NAME' already exists with ID: $EXISTING_ALIAS_ID"
           echo "alias_id=$EXISTING_ALIAS_ID" >> $GITHUB_OUTPUT
           exit 0
         fi
 
         #
-        # ───────────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────
         # CASE 2: Alias does not exist → create it
-        # ───────────────────────────────────────────────────────────────
+        # ────────────────────────────────────────────────
         #
         echo "Alias '$ALIAS_NAME' does not exist. Creating it now..."
 
