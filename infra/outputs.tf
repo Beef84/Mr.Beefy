@@ -18,9 +18,11 @@ output "agent_id" {
   description = "Bedrock Agent id (DRAFT agent created by Terraform)"
 }
 
+# Alias is now created/updated by CI, not Terraform.
+# Terraform cannot output a value it does not manage.
 output "agent_alias_id" {
-  value       = try(aws_bedrockagent_agent_alias.mrbeefy_prod["prod"].id, "")
-  description = "Alias id (empty if alias not created yet)"
+  value       = ""
+  description = "Alias id (managed by CI/CD pipeline)"
 }
 
 output "api_url" {
