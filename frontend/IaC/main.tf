@@ -184,12 +184,6 @@ resource "aws_cloudfront_cache_policy" "api" {
   default_ttl = 0
   max_ttl     = 0
   min_ttl     = 0
-
-  parameters_in_cache_key_and_forwarded_to_origin {
-    cookies_config { cookie_behavior = "none" }
-    headers_config { header_behavior = "none" }
-    query_strings_config { query_string_behavior = "all" }
-  }
 }
 
 resource "aws_cloudfront_origin_request_policy" "api" {
@@ -229,7 +223,7 @@ resource "aws_cloudfront_distribution" "frontend" {
 
   # Origin 2: API Gateway HTTP API (dynamic)
   origin {
-    domain_name = "${var.api_id}.execute-api.${data.aws_region.current.name}.amazonaws.com"
+    domain_name = "${var.api_id}.execute-api.${data.aws_region.current.id}.amazonaws.com"
     origin_id   = "mrbeefy-api-origin"
 
     custom_origin_config {
