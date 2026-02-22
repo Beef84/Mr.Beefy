@@ -1,0 +1,91 @@
+name: Update Knowledge Base
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "knowledge/**"
+
+jobs:
+  ingest-knowledge:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    # -----------------------------
+    # Ensure AWS CLI v2
+    # -----------------------------
+    - name: Ensure awscli v2
+      run: |
+        set -e
+        rm -rf aws awscliv2.zip
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+        unzip -o -q awscliv2.zip
+        sudo ./aws/install --update
+        echo "/usr/local/bin" >> $GITHUB_PATH
+        aws --version
+
+    # -----------------------------
+    # Get KB ID dynamically
+    # -----------------------------
+    - name: Lookup Knowledge Base ID
+      id: lookup
+      run: |
+        KB_ID=$(aws bedrock-agent list-knowledge-bases \
+          --query "knowledgeBaseSummaries[?name=='mrbeefy-kb'] | [0].knowledgeBaseId" \
+          --output text)
+
+        if [ -z "$KB_ID" ] || [ "$KB_ID" = "None" ]; then
+          echo "Knowledge Base 'mrbeefy-kb' not found."
+          exit 1
+        fi
+
+        echo "kb_id=$KB_ID" >> $GITHUB_OUTPUT
+
+    # -----------------------------
+    # Upload Knowledge Files
+    # -----------------------------
+    - name: Upload Knowledge Files
+      run: |
+        BUCKET=$(aws bedrock-agent get-knowledge-base \
+          --knowledge-base-id ${{ steps.lookup.outputs.kb_id }} \
+          --query "knowledgeBase.dataSourceConfigurations[0].s3Configuration.bucketArn" \
+          --output text | sed 's|arn:aws:s3:::||')
+
+        aws s3 sync knowledge/ s3://$BUCKET/ --delete
+
+    # -----------------------------
+    # Trigger KB Ingestion
+    # -----------------------------
+    - name: Trigger KB Ingestion
+      working-directory: backend/cli
+      shell: pwsh
+      run: |
+        ./ingest.ps1 -KbId "${{ steps.lookup.outputs.kb_id }}"
+
+    # -----------------------------
+    # Re-associate KB with Agent (DRAFT)
+    # -----------------------------
+    - name: Associate KB with Agent (DRAFT)
+      working-directory: backend/cli
+      shell: pwsh
+      run: |
+        ./associate_kb.ps1 `
+          -AgentId "$(aws bedrock-agent list-agents --query "agentSummaries[?name=='mrbeefy'] | [0].agentId" --output text)" `
+          -KbId "${{ steps.lookup.outputs.kb_id }}" `
+          -AgentVersion "DRAFT"
+
+    # -----------------------------
+    # Done
+    # -----------------------------
+    - name: Knowledge Update Complete
+      run: echo "Knowledge Base updated and ingestion triggered."
