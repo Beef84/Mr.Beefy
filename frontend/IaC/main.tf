@@ -273,7 +273,7 @@ resource "aws_cloudfront_distribution" "frontend" {
 
     cache_policy_id          = aws_cloudfront_cache_policy.api.id
     origin_request_policy_id = aws_cloudfront_origin_request_policy.api.id
- }
+  }
 
   restrictions {
     geo_restriction {
