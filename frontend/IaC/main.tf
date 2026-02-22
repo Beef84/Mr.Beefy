@@ -69,12 +69,12 @@ resource "aws_acm_certificate_validation" "mrbeefy" {
   validation_record_fqdns = [for r in aws_route53_record.mrbeefy_cert_validation : r.fqdn]
 }
 
-resource "aws_s3_bucket" "frontend" {
-  bucket = "mrbeefy-frontend-${random_id.suffix.hex}"
-}
-
 resource "random_id" "suffix" {
   byte_length = 4
+}
+
+resource "aws_s3_bucket" "frontend" {
+  bucket = "mrbeefy-frontend-${random_id.suffix.hex}"
 }
 
 resource "aws_s3_bucket_public_access_block" "frontend" {
@@ -203,7 +203,9 @@ resource "aws_cloudfront_cache_policy" "api" {
 resource "aws_cloudfront_origin_request_policy" "api" {
   name = "mrbeefy-api-origin-request-policy"
 
-  cookies_config { cookie_behavior = "none" }
+  cookies_config {
+    cookie_behavior = "none"
+  }
 
   headers_config {
     header_behavior = "whitelist"
@@ -213,7 +215,9 @@ resource "aws_cloudfront_origin_request_policy" "api" {
     }
   }
 
-  query_strings_config { query_string_behavior = "all" }
+  query_strings_config {
+    query_string_behavior = "all"
+  }
 }
 
 resource "aws_cloudfront_distribution" "frontend" {
@@ -264,7 +268,7 @@ resource "aws_cloudfront_distribution" "frontend" {
     target_origin_id       = "mrbeefy-api-origin"
     viewer_protocol_policy = "redirect-to-https"
 
-    allowed_methods = ["GET", "HEAD", "OPTIONS", "POST"]
+    allowed_methods = ["GET", "HEAD", "OPTIONS", "PUT", "POST", "PATCH", "DELETE"]
     cached_methods  = ["GET", "HEAD"]
 
     cache_policy_id          = aws_cloudfront_cache_policy.api.id
@@ -272,7 +276,9 @@ resource "aws_cloudfront_distribution" "frontend" {
  }
 
   restrictions {
-    geo_restriction { restriction_type = "none" }
+    geo_restriction {
+      restriction_type = "none"
+    }
   }
 
   viewer_certificate {
