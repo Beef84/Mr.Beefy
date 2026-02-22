@@ -5,6 +5,14 @@ on:
     branches: [ main ]
     paths:
       - "frontend/**"
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Why are you manually deploying?"
+        required: false
+        default: "Manual trigger"
+
+
 
 jobs:
   deploy-frontend:
