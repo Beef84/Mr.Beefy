@@ -13,6 +13,54 @@ provider "aws" {
   region = "us-east-1"
 }
 
+data "aws_route53_zone" "mrbeefy" {
+  name         = "mrbeefy.academy"
+  private_zone = false
+}
+
+resource "aws_acm_certificate" "mrbeefy" {
+  domain_name       = "mrbeefy.academy"
+  validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_route53_record" "mrbeefy_cert_validation" {
+  for_each = {
+    for dvo in aws_acm_certificate.mrbeefy.domain_validation_options :
+    dvo.domain_name => {
+      name   = dvo.resource_record_name
+      type   = dvo.resource_record_type
+      record = dvo.resource_record_value
+    }
+  }
+
+  zone_id = data.aws_route53_zone.mrbeefy.zone_id
+  name    = each.value.name
+  type    = each.value.type
+  ttl     = 300
+  records = [each.value.record]
+}
+
+resource "aws_route53_record" "mrbeefy_root" {
+  zone_id = data.aws_route53_zone.mrbeefy.zone_id
+  name    = "mrbeefy.academy"
+  type    = "A"
+
+  alias {
+    name                   = aws_cloudfront_distribution.frontend.domain_name
+    zone_id                = aws_cloudfront_distribution.frontend.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+resource "aws_acm_certificate_validation" "mrbeefy" {
+  certificate_arn         = aws_acm_certificate.mrbeefy.arn
+  validation_record_fqdns = [for r in aws_route53_record.mrbeefy_cert_validation : r.fqdn]
+}
+
 # S3 bucket for frontend assets (private, behind CloudFront)
 resource "aws_s3_bucket" "frontend" {
   bucket = "mrbeefy-frontend-${random_id.suffix.hex}"
@@ -131,9 +179,15 @@ resource "aws_cloudfront_response_headers_policy" "frontend" {
 
 # CloudFront distribution
 resource "aws_cloudfront_distribution" "frontend" {
+  depends_on = [
+    aws_acm_certificate_validation.mrbeefy
+  ]
+
   enabled             = true
   comment             = "Mr. Beefy frontend"
   default_root_object = "index.html"
+
+  aliases = ["mrbeefy.academy"]
 
   origin {
     domain_name = aws_s3_bucket.frontend.bucket_regional_domain_name
@@ -149,8 +203,8 @@ resource "aws_cloudfront_distribution" "frontend" {
     allowed_methods = ["GET", "HEAD"]
     cached_methods  = ["GET", "HEAD"]
 
-    cache_policy_id              = aws_cloudfront_cache_policy.frontend.id
-    response_headers_policy_id   = aws_cloudfront_response_headers_policy.frontend.id
+    cache_policy_id            = aws_cloudfront_cache_policy.frontend.id
+    response_headers_policy_id = aws_cloudfront_response_headers_policy.frontend.id
   }
 
   restrictions {
@@ -160,6 +214,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = true
+    acm_certificate_arn = aws_acm_certificate.mrbeefy.arn
+    ssl_support_method  = "sni-only"
   }
 }
