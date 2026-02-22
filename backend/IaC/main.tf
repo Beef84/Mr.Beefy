@@ -296,8 +296,3 @@ resource "aws_lambda_permission" "api_gateway_invoke" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
 }
-
-# Output for frontend pipeline artifact
-output "api_id" {
-  value = aws_apigatewayv2_api.http_api.id
-}
