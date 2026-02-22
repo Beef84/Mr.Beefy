@@ -20,9 +20,8 @@ data "aws_route53_zone" "mrbeefy" {
   private_zone = false
 }
 
-# Discover the existing REST API for Mr. Beefy (name must match your backend)
-data "aws_api_gateway_rest_api" "mrbeefy" {
-  name = "mrbeefy-api"
+data "aws_apigatewayv2_api" "mrbeefy" {
+  name = "mrbeefy-http-api"
 }
 
 resource "aws_acm_certificate" "mrbeefy" {
@@ -247,9 +246,9 @@ resource "aws_cloudfront_distribution" "frontend" {
     origin_access_control_id = aws_cloudfront_origin_access_control.frontend_oac.id
   }
 
-  # Origin 2: API Gateway (no hardcoded ID)
+  # Origin 2: API Gateway HTTP API (no hardcoded ID)
   origin {
-    domain_name = "${data.aws_api_gateway_rest_api.mrbeefy.id}.execute-api.${data.aws_region.current.name}.amazonaws.com"
+    domain_name = replace(data.aws_apigatewayv2_api.mrbeefy.api_endpoint, "https://", "")
     origin_id   = "mrbeefy-api-origin"
 
     custom_origin_config {
