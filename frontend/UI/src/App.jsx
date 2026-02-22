@@ -4,7 +4,7 @@ import "./App.css";
 function App() {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
-    const API_URL = "prod/chat";
+    const API_URL = "/chat";
 
     async function sendMessage() {
         if (!input.trim()) return;

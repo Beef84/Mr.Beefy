@@ -244,6 +244,8 @@ resource "aws_cloudfront_distribution" "frontend" {
     domain_name = "${var.api_id}.execute-api.${data.aws_region.current.id}.amazonaws.com"
     origin_id   = "mrbeefy-api-origin"
 
+    origin_path = "/prod"
+
     custom_origin_config {
       http_port              = 80
       https_port             = 443
