@@ -297,3 +297,14 @@ resource "aws_lambda_permission" "api_gateway_invoke" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
 }
+
+resource "aws_apigatewayv2_api" "mrbeefy" {
+  name          = "mrbeefy-http-api"
+  protocol_type = "HTTP"
+
+  cors_configuration {
+    allow_origins = ["https://mrbeefy.academy"]
+    allow_methods = ["OPTIONS", "POST"]
+    allow_headers = ["content-type"]
+  }
+}
