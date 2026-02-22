@@ -4,7 +4,7 @@ import "./App.css";
 function App() {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
-    const API_URL = "https://mz7q0kc3p2.execute-api.us-east-1.amazonaws.com/prod/chat";
+    const API_URL = "/chat";
 
     async function sendMessage() {
         if (!input.trim()) return;

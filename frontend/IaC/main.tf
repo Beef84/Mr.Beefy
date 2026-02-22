@@ -177,7 +177,45 @@ resource "aws_cloudfront_response_headers_policy" "frontend" {
   }
 }
 
-# CloudFront distribution
+resource "aws_cloudfront_cache_policy" "api" {
+  name = "mrbeefy-api-cache-policy"
+
+  default_ttl = 0
+  max_ttl     = 0
+  min_ttl     = 0
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    cookies_config {
+      cookie_behavior = "none"
+    }
+
+    headers_config {
+      header_behavior = "none"
+    }
+
+    query_strings_config {
+      query_string_behavior = "all"
+    }
+  }
+}
+
+resource "aws_cloudfront_origin_request_policy" "api" {
+  name = "mrbeefy-api-origin-request-policy"
+
+  cookies_config {
+    cookie_behavior = "none"
+  }
+
+  headers_config {
+    header_behavior = "whitelist"
+    headers         = ["Content-Type"]
+  }
+
+  query_strings_config {
+    query_string_behavior = "all"
+  }
+}
+
 resource "aws_cloudfront_distribution" "frontend" {
   depends_on = [
     aws_acm_certificate_validation.mrbeefy
@@ -196,6 +234,17 @@ resource "aws_cloudfront_distribution" "frontend" {
     origin_access_control_id = aws_cloudfront_origin_access_control.frontend_oac.id
   }
 
+  origin {
+    domain_name = "mz7q0kc3p2.execute-api.us-east-1.amazonaws.com"
+    origin_id   = "mrbeefy-api-origin"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only"
+    }
+  }
+
   default_cache_behavior {
     target_origin_id       = "mrbeefy-frontend-origin"
     viewer_protocol_policy = "redirect-to-https"
@@ -205,6 +254,18 @@ resource "aws_cloudfront_distribution" "frontend" {
 
     cache_policy_id            = aws_cloudfront_cache_policy.frontend.id
     response_headers_policy_id = aws_cloudfront_response_headers_policy.frontend.id
+  }
+
+  ordered_cache_behavior {
+    path_pattern           = "/chat"
+    target_origin_id       = "mrbeefy-api-origin"
+    viewer_protocol_policy = "redirect-to-https"
+
+    allowed_methods = ["GET", "HEAD", "OPTIONS", "POST"]
+    cached_methods  = ["GET", "HEAD"]
+
+    cache_policy_id          = aws_cloudfront_cache_policy.api.id
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.api.id
   }
 
   restrictions {
