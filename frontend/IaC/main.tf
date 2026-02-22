@@ -1,4 +1,4 @@
-terraform {
+﻿terraform {
   required_version = ">= 1.6.0"
 
   required_providers {
@@ -13,9 +13,16 @@ provider "aws" {
   region = "us-east-1"
 }
 
+data "aws_region" "current" {}
+
 data "aws_route53_zone" "mrbeefy" {
   name         = "mrbeefy.academy"
   private_zone = false
+}
+
+# Discover the existing REST API for Mr. Beefy (name must match your backend)
+data "aws_api_gateway_rest_api" "mrbeefy" {
+  name = "mrbeefy-api"
 }
 
 resource "aws_acm_certificate" "mrbeefy" {
@@ -120,7 +127,7 @@ resource "aws_s3_bucket_policy" "frontend" {
   policy = data.aws_iam_policy_document.frontend_bucket_policy.json
 }
 
-# Optional: basic cache policy
+# Optional: basic cache policy for static frontend
 resource "aws_cloudfront_cache_policy" "frontend" {
   name = "mrbeefy-frontend-cache-policy"
 
@@ -177,6 +184,7 @@ resource "aws_cloudfront_response_headers_policy" "frontend" {
   }
 }
 
+# API cache policy (no caching)
 resource "aws_cloudfront_cache_policy" "api" {
   name = "mrbeefy-api-cache-policy"
 
@@ -199,6 +207,7 @@ resource "aws_cloudfront_cache_policy" "api" {
   }
 }
 
+# API origin request policy
 resource "aws_cloudfront_origin_request_policy" "api" {
   name = "mrbeefy-api-origin-request-policy"
 
@@ -230,6 +239,7 @@ resource "aws_cloudfront_distribution" "frontend" {
 
   aliases = ["mrbeefy.academy"]
 
+  # Origin 1: S3 frontend
   origin {
     domain_name = aws_s3_bucket.frontend.bucket_regional_domain_name
     origin_id   = "mrbeefy-frontend-origin"
@@ -237,17 +247,20 @@ resource "aws_cloudfront_distribution" "frontend" {
     origin_access_control_id = aws_cloudfront_origin_access_control.frontend_oac.id
   }
 
+  # Origin 2: API Gateway (no hardcoded ID)
   origin {
-    domain_name = "mz7q0kc3p2.execute-api.us-east-1.amazonaws.com"
+    domain_name = "${data.aws_api_gateway_rest_api.mrbeefy.id}.execute-api.${data.aws_region.current.name}.amazonaws.com"
     origin_id   = "mrbeefy-api-origin"
 
     custom_origin_config {
       http_port              = 80
       https_port             = 443
       origin_protocol_policy = "https-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
     }
   }
 
+  # Default behavior: static frontend
   default_cache_behavior {
     target_origin_id       = "mrbeefy-frontend-origin"
     viewer_protocol_policy = "redirect-to-https"
@@ -259,6 +272,7 @@ resource "aws_cloudfront_distribution" "frontend" {
     response_headers_policy_id = aws_cloudfront_response_headers_policy.frontend.id
   }
 
+  # /chat → API Gateway
   ordered_cache_behavior {
     path_pattern           = "/chat"
     target_origin_id       = "mrbeefy-api-origin"
