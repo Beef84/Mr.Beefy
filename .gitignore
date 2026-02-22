@@ -4,3 +4,4 @@
 
 /.vs
 infra/.terraform/
+/frontend/IaC/.terraform
