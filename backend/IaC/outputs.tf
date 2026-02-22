@@ -18,14 +18,7 @@ output "agent_id" {
   description = "Bedrock Agent id (DRAFT agent created by Terraform)"
 }
 
-# Alias is now created/updated by CI, not Terraform.
-# Terraform cannot output a value it does not manage.
-output "agent_alias_id" {
-  value       = ""
-  description = "Alias id (managed by CI/CD pipeline)"
-}
-
-output "api_url" {
-  value       = format("%s/prod/chat", aws_apigatewayv2_api.http_api.api_endpoint)
-  description = "HTTP API endpoint for the chat route"
+output "api_id" {
+  value       = aws_apigatewayv2_api.http_api.id
+  description = "API Gateway HTTP API ID for CloudFront origin routing"
 }
