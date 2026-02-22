@@ -71,17 +71,15 @@ jobs:
         echo "api_id=$(terraform output -raw api_id)" >> $GITHUB_OUTPUT
 
     # -----------------------------
-    # Publish API ID Artifact
+    # Write API ID to SSM Parameter Store
     # -----------------------------
-    - name: Write API ID Artifact
+    - name: Store API ID in SSM
       run: |
-        echo "API_ID=${{ steps.tfout.outputs.api_id }}" > api-info.env
-
-    - name: Upload API Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: mrbeefy-api-info
-        path: api-info.env
+        aws ssm put-parameter \
+          --name "/mrbeefy/api_id" \
+          --type "String" \
+          --value "${{ steps.tfout.outputs.api_id }}" \
+          --overwrite
 
     # -----------------------------
     # Ensure AWS CLI v2

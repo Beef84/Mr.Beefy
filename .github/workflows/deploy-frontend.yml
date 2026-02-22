@@ -22,17 +22,15 @@ jobs:
         aws-region: us-east-1
 
     # -----------------------------
-    # Download API ID Artifact
+    # Read API ID from SSM Parameter Store
     # -----------------------------
-    - name: Download API Artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: mrbeefy-api-info
-
-    - name: Load API ID
+    - name: Read API ID from SSM
       id: api
       run: |
-        source api-info.env
+        API_ID=$(aws ssm get-parameter \
+          --name "/mrbeefy/api_id" \
+          --query "Parameter.Value" \
+          --output text)
         echo "api_id=$API_ID" >> $GITHUB_OUTPUT
         echo "Using API ID: $API_ID"
 
