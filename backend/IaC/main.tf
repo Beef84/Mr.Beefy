@@ -77,7 +77,7 @@ resource "aws_iam_role_policy" "kb_policy" {
           "s3vectors:DeleteVectors",
           "s3vectors:QueryVectors"
         ],
-        Resource = "arn:aws:s3vectors:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:bucket/*"
+        "arn:aws:s3vectors:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:bucket/*"
       },
 
       # Bedrock embedding model permissions
