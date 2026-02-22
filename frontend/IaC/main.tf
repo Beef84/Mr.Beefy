@@ -15,13 +15,15 @@ provider "aws" {
 
 data "aws_region" "current" {}
 
+# NEW: API ID passed from backend pipeline
+variable "api_id" {
+  type        = string
+  description = "API Gateway HTTP API ID passed from backend pipeline"
+}
+
 data "aws_route53_zone" "mrbeefy" {
   name         = "mrbeefy.academy"
   private_zone = false
-}
-
-data "aws_apigatewayv2_api" "mrbeefy" {
-  name = "mrbeefy-http-api"
 }
 
 resource "aws_acm_certificate" "mrbeefy" {
@@ -67,7 +69,6 @@ resource "aws_acm_certificate_validation" "mrbeefy" {
   validation_record_fqdns = [for r in aws_route53_record.mrbeefy_cert_validation : r.fqdn]
 }
 
-# S3 bucket for frontend assets (private, behind CloudFront)
 resource "aws_s3_bucket" "frontend" {
   bucket = "mrbeefy-frontend-${random_id.suffix.hex}"
 }
@@ -85,7 +86,6 @@ resource "aws_s3_bucket_public_access_block" "frontend" {
   restrict_public_buckets = true
 }
 
-# CloudFront Origin Access Control (OAC)
 resource "aws_cloudfront_origin_access_control" "frontend_oac" {
   name                              = "mrbeefy-frontend-oac"
   description                       = "OAC for Mr. Beefy frontend"
@@ -94,7 +94,6 @@ resource "aws_cloudfront_origin_access_control" "frontend_oac" {
   signing_protocol                  = "sigv4"
 }
 
-# Bucket policy to allow CloudFront OAC to read objects
 data "aws_iam_policy_document" "frontend_bucket_policy" {
   statement {
     sid    = "AllowCloudFrontOACRead"
@@ -126,7 +125,6 @@ resource "aws_s3_bucket_policy" "frontend" {
   policy = data.aws_iam_policy_document.frontend_bucket_policy.json
 }
 
-# Optional: basic cache policy for static frontend
 resource "aws_cloudfront_cache_policy" "frontend" {
   name = "mrbeefy-frontend-cache-policy"
 
@@ -149,14 +147,11 @@ resource "aws_cloudfront_cache_policy" "frontend" {
   }
 }
 
-# Optional: basic security headers
 resource "aws_cloudfront_response_headers_policy" "frontend" {
   name = "mrbeefy-frontend-security-headers"
 
   security_headers_config {
-    content_type_options {
-      override = true
-    }
+    content_type_options { override = true }
 
     frame_options {
       frame_option = "DENY"
@@ -183,7 +178,6 @@ resource "aws_cloudfront_response_headers_policy" "frontend" {
   }
 }
 
-# API cache policy (no caching)
 resource "aws_cloudfront_cache_policy" "api" {
   name = "mrbeefy-api-cache-policy"
 
@@ -192,27 +186,16 @@ resource "aws_cloudfront_cache_policy" "api" {
   min_ttl     = 0
 
   parameters_in_cache_key_and_forwarded_to_origin {
-    cookies_config {
-      cookie_behavior = "none"
-    }
-
-    headers_config {
-      header_behavior = "none"
-    }
-
-    query_strings_config {
-      query_string_behavior = "all"
-    }
+    cookies_config { cookie_behavior = "none" }
+    headers_config { header_behavior = "none" }
+    query_strings_config { query_string_behavior = "all" }
   }
 }
 
-# API origin request policy
 resource "aws_cloudfront_origin_request_policy" "api" {
   name = "mrbeefy-api-origin-request-policy"
 
-  cookies_config {
-    cookie_behavior = "none"
-  }
+  cookies_config { cookie_behavior = "none" }
 
   headers_config {
     header_behavior = "whitelist"
@@ -222,9 +205,7 @@ resource "aws_cloudfront_origin_request_policy" "api" {
     }
   }
 
-  query_strings_config {
-    query_string_behavior = "all"
-  }
+  query_strings_config { query_string_behavior = "all" }
 }
 
 resource "aws_cloudfront_distribution" "frontend" {
@@ -246,9 +227,9 @@ resource "aws_cloudfront_distribution" "frontend" {
     origin_access_control_id = aws_cloudfront_origin_access_control.frontend_oac.id
   }
 
-  # Origin 2: API Gateway HTTP API (no hardcoded ID)
+  # Origin 2: API Gateway HTTP API (dynamic)
   origin {
-    domain_name = replace(data.aws_apigatewayv2_api.mrbeefy.api_endpoint, "https://", "")
+    domain_name = "${var.api_id}.execute-api.${data.aws_region.current.name}.amazonaws.com"
     origin_id   = "mrbeefy-api-origin"
 
     custom_origin_config {
@@ -259,7 +240,6 @@ resource "aws_cloudfront_distribution" "frontend" {
     }
   }
 
-  # Default behavior: static frontend
   default_cache_behavior {
     target_origin_id       = "mrbeefy-frontend-origin"
     viewer_protocol_policy = "redirect-to-https"
@@ -271,7 +251,6 @@ resource "aws_cloudfront_distribution" "frontend" {
     response_headers_policy_id = aws_cloudfront_response_headers_policy.frontend.id
   }
 
-  # /chat → API Gateway
   ordered_cache_behavior {
     path_pattern           = "/chat"
     target_origin_id       = "mrbeefy-api-origin"
@@ -285,9 +264,7 @@ resource "aws_cloudfront_distribution" "frontend" {
   }
 
   restrictions {
-    geo_restriction {
-      restriction_type = "none"
-    }
+    geo_restriction { restriction_type = "none" }
   }
 
   viewer_certificate {

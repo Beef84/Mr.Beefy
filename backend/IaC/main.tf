@@ -18,6 +18,7 @@ provider "aws" {
 }
 
 data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
 
 resource "random_id" "suffix" {
   byte_length = 4
@@ -63,7 +64,7 @@ resource "aws_iam_role_policy" "kb_policy" {
         ]
       },
 
-      # Vector store permissions (correct region)
+      # Vector store permissions
       {
         Effect = "Allow",
         Action = [
@@ -76,17 +77,17 @@ resource "aws_iam_role_policy" "kb_policy" {
           "s3vectors:DeleteVectors",
           "s3vectors:QueryVectors"
         ],
-        Resource = "arn:aws:s3vectors:us-east-1:${data.aws_caller_identity.current.account_id}:bucket/*"
+        Resource = "arn:aws:s3vectors:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:bucket/*"
       },
 
-      # REQUIRED: Bedrock embedding model permissions
+      # Bedrock embedding model permissions
       {
         Effect = "Allow",
         Action = [
           "bedrock:InvokeModel",
           "bedrock:InvokeModelWithResponseStream"
         ],
-        Resource = "arn:aws:bedrock:us-east-1::foundation-model/amazon.titan-embed-text-v2:0"
+        Resource = "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/amazon.titan-embed-text-v2:0"
       }
     ]
   })
@@ -124,7 +125,7 @@ resource "aws_iam_role_policy" "agent_execution_policy" {
           "bedrock:InvokeModel",
           "bedrock:InvokeModelWithResponseStream"
         ]
-        Resource = "arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-pro-v1:0"
+        Resource = "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/amazon.nova-pro-v1:0"
       },
 
       # Allow the agent to retrieve from your Knowledge Base
@@ -134,7 +135,7 @@ resource "aws_iam_role_policy" "agent_execution_policy" {
           "bedrock:Retrieve",
           "bedrock:RetrieveAndGenerate"
         ]
-        Resource = "arn:aws:bedrock:us-east-1:${data.aws_caller_identity.current.account_id}:knowledge-base/*"
+        Resource = "arn:aws:bedrock:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:knowledge-base/*"
       },
 
       # Allow the agent to read from your KB S3 bucket
@@ -185,14 +186,6 @@ ACTION RULES:
 EOF
 }
 
-# NOTE: alias is now CI-owned; Terraform does NOT create it.
-# If you want Terraform to *read* an existing alias, you can add:
-#
-# data "aws_bedrockagent_agent_alias" "mrbeefy_prod" {
-#   agent_id         = aws_bedrockagent_agent.mrbeefy.id
-#   agent_alias_name = "prod"
-# }
-
 # Lambda role
 resource "aws_iam_role" "lambda_role" {
   name = "mrbeefy-lambda-role"
@@ -242,7 +235,7 @@ resource "aws_lambda_function" "api" {
   handler       = "index.handler"
   runtime       = "nodejs20.x"
 
-  timeout       = 30  # <-- ADD THIS
+  timeout = 30
 
   filename         = "${path.module}/../lambda/dist.zip"
   source_code_hash = filebase64sha256("${path.module}/../lambda/dist.zip")
@@ -256,10 +249,16 @@ resource "aws_lambda_function" "api" {
   }
 }
 
-# HTTP API Gateway
+# HTTP API Gateway (single definition, with CORS)
 resource "aws_apigatewayv2_api" "http_api" {
   name          = "mrbeefy-http-api"
   protocol_type = "HTTP"
+
+  cors_configuration {
+    allow_origins = ["https://mrbeefy.academy"]
+    allow_methods = ["OPTIONS", "POST"]
+    allow_headers = ["content-type"]
+  }
 }
 
 resource "aws_apigatewayv2_integration" "lambda_integration" {
@@ -298,13 +297,7 @@ resource "aws_lambda_permission" "api_gateway_invoke" {
   source_arn    = "${aws_apigatewayv2_api.http_api.execution_arn}/*/*"
 }
 
-resource "aws_apigatewayv2_api" "mrbeefy" {
-  name          = "mrbeefy-http-api"
-  protocol_type = "HTTP"
-
-  cors_configuration {
-    allow_origins = ["https://mrbeefy.academy"]
-    allow_methods = ["OPTIONS", "POST"]
-    allow_headers = ["content-type"]
-  }
+# Output for frontend pipeline artifact
+output "api_id" {
+  value = aws_apigatewayv2_api.http_api.id
 }

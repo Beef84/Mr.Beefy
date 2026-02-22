@@ -22,6 +22,21 @@ jobs:
         aws-region: us-east-1
 
     # -----------------------------
+    # Download API ID Artifact
+    # -----------------------------
+    - name: Download API Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: mrbeefy-api-info
+
+    - name: Load API ID
+      id: api
+      run: |
+        source api-info.env
+        echo "api_id=$API_ID" >> $GITHUB_OUTPUT
+        echo "Using API ID: $API_ID"
+
+    # -----------------------------
     # Build Frontend (Vite)
     # -----------------------------
     - name: Install Node
@@ -49,7 +64,7 @@ jobs:
 
     - name: Terraform Apply
       working-directory: frontend/IaC
-      run: terraform apply -auto-approve
+      run: terraform apply -auto-approve -var="api_id=${{ steps.api.outputs.api_id }}"
 
     # -----------------------------
     # Capture Terraform Outputs

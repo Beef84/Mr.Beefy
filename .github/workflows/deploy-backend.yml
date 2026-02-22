@@ -46,16 +46,16 @@ jobs:
       run: zip -r dist.zip dist
 
     # -----------------------------
-    # Terraform Deploy (create/update DRAFT)
+    # Terraform Deploy
     # -----------------------------
     - name: Install Terraform
       uses: hashicorp/setup-terraform@v3
 
-    - name: Terraform Init (main)
+    - name: Terraform Init
       working-directory: backend/IaC
       run: terraform init -upgrade
 
-    - name: Terraform Apply (create/update DRAFT)
+    - name: Terraform Apply
       working-directory: backend/IaC
       run: terraform apply -auto-approve
 
@@ -68,7 +68,20 @@ jobs:
       run: |
         echo "bucket=$(terraform output -raw knowledge_bucket)" >> $GITHUB_OUTPUT
         echo "agent_id=$(terraform output -raw agent_id)" >> $GITHUB_OUTPUT
-        echo "alias_id=$(terraform output -raw agent_alias_id)" >> $GITHUB_OUTPUT
+        echo "api_id=$(terraform output -raw api_id)" >> $GITHUB_OUTPUT
+
+    # -----------------------------
+    # Publish API ID Artifact
+    # -----------------------------
+    - name: Write API ID Artifact
+      run: |
+        echo "API_ID=${{ steps.tfout.outputs.api_id }}" > api-info.env
+
+    - name: Upload API Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: mrbeefy-api-info
+        path: api-info.env
 
     # -----------------------------
     # Ensure AWS CLI v2
@@ -125,7 +138,7 @@ jobs:
           -AgentVersion "DRAFT"
 
     # -----------------------------
-    # Create or Update Alias (THIS IS THE PUBLISH)
+    # Create or Update Alias
     # -----------------------------
     - name: Create Alias If Missing
       id: create_or_update_alias
@@ -137,31 +150,16 @@ jobs:
       run: |
         set -euo pipefail
 
-        echo "Checking for existing alias '$ALIAS_NAME'..."
-
         EXISTING_ALIAS_ID=$(aws bedrock-agent list-agent-aliases \
           --agent-id "$AGENT_ID" \
           --region "$AWS_REGION" \
           --query "agentAliasSummaries[?agentAliasName=='${ALIAS_NAME}'] | [0].agentAliasId" \
           --output text 2>/dev/null || true)
 
-        #
-        # ────────────────────────────────────────────────
-        # CASE 1: Alias exists → do nothing
-        # ────────────────────────────────────────────────
-        #
         if [ -n "$EXISTING_ALIAS_ID" ] && [ "$EXISTING_ALIAS_ID" != "None" ]; then
-          echo "Alias '$ALIAS_NAME' already exists with ID: $EXISTING_ALIAS_ID"
           echo "alias_id=$EXISTING_ALIAS_ID" >> $GITHUB_OUTPUT
           exit 0
         fi
-
-        #
-        # ────────────────────────────────────────────────
-        # CASE 2: Alias does not exist → create it
-        # ────────────────────────────────────────────────
-        #
-        echo "Alias '$ALIAS_NAME' does not exist. Creating it now..."
 
         aws bedrock-agent create-agent-alias \
           --agent-id "$AGENT_ID" \
@@ -171,11 +169,10 @@ jobs:
 
         NEW_ALIAS_ID=$(jq -r '.agentAlias.agentAliasId' alias.json)
 
-        echo "Created alias '$ALIAS_NAME' with ID: $NEW_ALIAS_ID"
         echo "alias_id=$NEW_ALIAS_ID" >> $GITHUB_OUTPUT
 
     # -----------------------------
-    # Update Lambda env with agent + alias IDs
+    # Update Lambda Environment
     # -----------------------------
     - name: Update Lambda Environment Variables
       run: |
@@ -184,7 +181,7 @@ jobs:
           --environment "Variables={AGENT_ID=${{ steps.tfout.outputs.agent_id }},AGENT_ALIAS_ID=${{ steps.create_or_update_alias.outputs.alias_id }}}"
 
     # -----------------------------
-    # DONE — no second apply needed
+    # DONE
     # -----------------------------
     - name: Deployment Complete
-      run: echo "Mr. Beefy deployed successfully via alias-based versioning."
+      run: echo "Mr. Beefy backend deployed successfully."
