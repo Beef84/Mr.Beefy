@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
     paths:
-      - "knowledge/**"
+      - "wiki/**"
 
 jobs:
   ingest-knowledge:
