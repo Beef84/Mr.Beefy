@@ -4,8 +4,13 @@ on:
   push:
     branches: [ main ]
     paths:
-      - "knowledge/**"
-
+      - "wiki/**"
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Why are you manually deploying?"
+        required: false
+        default: "Manual trigger"
 jobs:
   ingest-knowledge:
     runs-on: ubuntu-latest
