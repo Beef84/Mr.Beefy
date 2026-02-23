@@ -1,22 +1,35 @@
-## AWS Bedrock as the AI Platform
-Chosen for its managed model hosting, agent orchestration, and integrated
-Knowledge Bases.
+# **🧩 Mr. Beefy — Design Decisions (Final Architecture Rationale)**  
+*Technical justification for the system’s structure, components, and responsibilities*
 
-## Serverless Architecture
-Lambda, API Gateway, and S3 provide low-cost, scalable infrastructure suitable
-for a public-facing agent.
+---
 
-## GitHub Wiki as the Single Source of Truth
-Jordan writes documentation once. A GitHub Action extracts structured content
-and updates the `/knowledge` directory automatically.
+# **1. Guiding Principles**
 
-## S3 Vector Store
-Provides low-cost, serverless vector storage for RAG workflows.
+The design of Mr. Beefy followed a consistent set of engineering principles:
 
-## Small Foundation Models
-Models such as Claude 3 Haiku and Llama 3.1 8B provide fast, cost-efficient
-inference suitable for public access.
+- **Separation of concerns** between static infrastructure, dynamic agent lifecycle, and runtime behavior  
+- **Deterministic deployments** using Terraform for infrastructure and CI/CD for dynamic operations  
+- **Minimal surface area** for IAM permissions  
+- **Serverless-first architecture** for scalability and cost efficiency  
+- **Explicitness over convention**, especially with AWS services that have hidden or implicit state  
+- **Simplicity at the edges, intelligence at the core** — the frontend stays thin, the backend stays predictable, and Bedrock handles reasoning  
 
-## Documentation-Driven Engineering
-All architecture, decisions, and workflows are documented in the wiki before
-implementation.
+These principles shaped every decision documented below.
+
+---
+
+# **2. Infrastructure Ownership Model**
+
+## **2.1 Terraform Owns Static Infrastructure**
+Terraform manages all resources that are:
+
+- Declarative  
+- Long‑lived  
+- Stable  
+- Not subject to frequent versioning  
+
+This includes:
+
+- S3 buckets (frontend + knowledge)  
+- CloudFront distribution  
+- Route53 records  

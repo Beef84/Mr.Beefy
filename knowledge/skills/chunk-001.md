@@ -1,24 +1,38 @@
-## Cloud & DevOps
-- Azure DevOps (expert)
-- AWS (Bedrock, Lambda, API Gateway, S3, CloudFront)
-- Infrastructure-as-Code (Terraform, Bicep, ARM, CloudFormation)
-- CI/CD automation and pipeline design
-- Containerization and orchestration (Docker, Kubernetes fundamentals)
+# **🧩 Skills — Jordan Oberrath**  
+*A complete, structured inventory of technical, architectural, operational, and leadership skills*
 
-## Backend Engineering
-- .NET and C#
-- Python scripting
-- Distributed systems design
-- API development and integration
+---
 
-## AI & ML Foundations
-- Retrieval-Augmented Generation (RAG)
-- AWS Bedrock Agents and Knowledge Bases
-- Python-based ML experimentation
-- GPU-based model testing (ComfyUI, LTX-Video, MusicGen)
+# **1. Distributed Systems & Backend Engineering**
 
-## Engineering Practices
-- Documentation-driven development
-- Cost-optimized architecture design
-- Troubleshooting in cloud and containerized environments
-- Mentoring and technical leadership
+### **Core Backend Development**
+- C#, .NET, .NET Core, ASP.NET Core  
+- REST API design and implementation  
+- Microservices and modular backend architectures  
+- Event‑driven and message‑driven systems  
+- High‑throughput, low‑latency backend design  
+- SQL Server (advanced), NoSQL concepts  
+- Data modeling, indexing, performance tuning  
+- SOA patterns and enterprise service architectures  
+
+### **Messaging & Integration**
+- HL7 integrations  
+- NServiceBus  
+- Distributed messaging patterns  
+- Event sourcing and pub/sub concepts  
+- Experience adjacent to Kafka‑style architectures  
+
+### **Enterprise Backend Systems**
+- Multi‑service orchestration  
+- API versioning and governance  
+- Backend reliability engineering  
+- Feature‑flag integration (LaunchDarkly)  
+- Rollout safety and progressive delivery  
+
+---
+
+# **2. Cloud, Infrastructure, and Platform Engineering**
+
+### **Cloud Platforms**
+- Azure (AKS, App Service, API Management, Functions, SQL Database)  
+- Cloud‑agnostic patterns applicable to AWS/GCP  

@@ -1,16 +1,27 @@
-# Welcome to Jordan Oberrath’s Engineering Wiki
+# **🏠 Mr. Beefy Documentation Home**  
+*A complete reference for the architecture, design, workflows, governance, and engineering principles behind the Mr. Beefy AI Platform.*
 
-This wiki serves as the single source of truth for all information related to:
+---
 
-- Jordan’s career and technical background  
-- Skills, certifications, and engineering philosophy  
-- The architecture and design of **Mr. Beefy**, the public-facing AI agent  
-- Project workflows, governance, and status updates  
-- The roadmap for Jordan’s transition into AI Infrastructure Engineering  
+# **Overview**
 
-All content in this wiki is automatically processed and transformed into
-structured knowledge for Jordan’s AWS Bedrock agent, **Mr. Beefy**. The agent
-uses this information to answer questions about Jordan’s background, experience,
-and technical decisions.
+This wiki serves as the **central documentation hub** for the Mr. Beefy platform — a fully serverless, production‑grade AI agent system built on AWS using Bedrock Agents, Knowledge Bases, vector retrieval, CloudFront, API Gateway, Lambda, and Infrastructure‑as‑Code.
 
-Use the navigation sidebar to explore the full documentation.
+It provides a comprehensive view of:
+
+- The platform’s **architecture and components**  
+- The **design decisions** that shaped the system  
+- The **operational workflows** that define how it runs  
+- The **governance model** that ensures stability and maintainability  
+- The **engineering philosophy** behind the project  
+- The **skills and experience** demonstrated through the work  
+- The **projects** that showcase long‑term technical depth  
+
+This wiki is intended for engineers, reviewers, hiring managers, and collaborators who want to understand the system’s structure, rationale, and evolution.
+
+---
+
+# **Contents of This Wiki**
+
+## **📐 Architecture**
+A detailed breakdown of the final production architecture, including:
