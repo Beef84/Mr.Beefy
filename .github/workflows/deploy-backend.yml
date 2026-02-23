@@ -78,6 +78,14 @@ jobs:
         echo "api_id=$(terraform output -raw api_id)" >> $GITHUB_OUTPUT
 
     # -----------------------------
+    # Write KB Metadata File
+    # -----------------------------
+    - name: Write KB Metadata File
+      run: |
+        echo "bucket=${{ steps.tfout.outputs.bucket }}" > kb_metadata.env
+        echo "agent_id=${{ steps.tfout.outputs.agent_id }}" >> kb_metadata.env
+
+    # -----------------------------
     # Write API ID to SSM Parameter Store
     # -----------------------------
     - name: Store API ID in SSM
