@@ -28,38 +28,28 @@ jobs:
         aws-region: us-east-1
 
     # -----------------------------
-    # Install Terraform CLI
+    # Load KB Metadata
     # -----------------------------
-    - name: Install Terraform
+    - name: Load KB Metadata
+      id: meta
       run: |
-        sudo apt-get update && sudo apt-get install -y unzip
-        curl -fsSL https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_amd64.zip -o terraform.zip
-        unzip terraform.zip
-        sudo mv terraform /usr/local/bin/
-        terraform -version
+        if [ ! -f kb_metadata.env ]; then
+          echo "ERROR: kb_metadata.env not found. Run backend deploy first."
+          exit 1
+        fi
 
-    # -----------------------------
-    # Load Terraform Outputs
-    # -----------------------------
-    - name: Load Terraform Outputs
-      id: tfout
-      working-directory: backend/IaC
-      run: |
-        terraform init -backend=false >/dev/null
+        source kb_metadata.env
 
-        BUCKET=$(terraform output -raw knowledge_bucket)
-        AGENT_ID=$(terraform output -raw agent_id)
-
-        echo "bucket=$BUCKET" >> $GITHUB_OUTPUT
-        echo "agent_id=$AGENT_ID" >> $GITHUB_OUTPUT
+        echo "bucket=$bucket" >> $GITHUB_OUTPUT
+        echo "agent_id=$agent_id" >> $GITHUB_OUTPUT
 
     # -----------------------------
     # Validate Bucket Exists
     # -----------------------------
     - name: Validate Bucket
       run: |
-        if ! aws s3 ls "s3://${{ steps.tfout.outputs.bucket }}" >/dev/null 2>&1; then
-          echo "ERROR: Bucket ${{ steps.tfout.outputs.bucket }} does not exist."
+        if ! aws s3 ls "s3://${{ steps.meta.outputs.bucket }}" >/dev/null 2>&1; then
+          echo "ERROR: Bucket ${{ steps.meta.outputs.bucket }} does not exist."
           exit 1
         fi
 
@@ -68,7 +58,7 @@ jobs:
     # -----------------------------
     - name: Upload Knowledge Files
       run: |
-        aws s3 sync knowledge/ s3://${{ steps.tfout.outputs.bucket }}/ --delete
+        aws s3 sync knowledge/ s3://${{ steps.meta.outputs.bucket }}/ --delete
 
     # -----------------------------
     # Lookup Knowledge Base ID
@@ -104,7 +94,7 @@ jobs:
       shell: pwsh
       run: |
         ./associate_kb.ps1 `
-          -AgentId "${{ steps.tfout.outputs.agent_id }}" `
+          -AgentId "${{ steps.meta.outputs.agent_id }}" `
           -KbId "${{ steps.lookup.outputs.kb_id }}" `
           -AgentVersion "DRAFT"
 
