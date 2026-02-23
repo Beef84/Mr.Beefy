@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
     paths:
-      - "wiki/**"
+      - "knowledge/**"
   workflow_dispatch:
     inputs:
       reason:
