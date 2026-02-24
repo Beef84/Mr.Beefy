@@ -30,15 +30,21 @@ jobs:
     # -----------------------------
     # Load KB Metadata
     # -----------------------------
+    - name: Checkout Wiki Repo
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ github.repository }}.wiki
+        path: wiki
+
     - name: Load KB Metadata
       id: meta
       run: |
-        if [ ! -f kb_metadata.env ]; then
-          echo "ERROR: kb_metadata.env not found. Run backend deploy first."
+        if [ ! -f wiki/kb_metadata.env ]; then
+          echo "ERROR: wiki/kb_metadata.env not found. Run backend deploy first."
           exit 1
         fi
 
-        source kb_metadata.env
+        source wiki/kb_metadata.env
 
         echo "bucket=$bucket" >> $GITHUB_OUTPUT
         echo "agent_id=$agent_id" >> $GITHUB_OUTPUT
