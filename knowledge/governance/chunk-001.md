@@ -1,17 +1,50 @@
-## Source of Truth
-- The GitHub wiki is the single source of truth for all human-authored content.
-- The `/knowledge` directory is auto-generated and must not be edited manually.
+# **🛡️ Mr. Beefy — Governance Model**  
+*Operational ownership, boundaries, and controls for the production system*
 
-## Branch Protection
-- All changes to `main` require a pull request.
-- CI/CD must pass before merging.
-- Conversations must be resolved before merge.
+---
 
-## Naming Conventions
-- Project name: Mr. Beefy  
-- Wiki pages use simple, descriptive names  
-- Knowledge files use kebab-case  
+# **1. Purpose of Governance**
 
-## Documentation Rules
-- All changes must be reflected in the wiki.
-- Architecture and design decisions must be documented before implementation.
+The governance model defines:
+
+- **Who owns what**  
+- **What processes are allowed**  
+- **How changes are introduced**  
+- **How stability is maintained**  
+- **How risk is minimized**  
+- **How the system remains predictable and maintainable over time**
+
+This ensures the platform remains secure, consistent, and scalable as it evolves.
+
+---
+
+# **2. Ownership Model**
+
+The system is governed by a clear separation of responsibilities across three domains:
+
+## **2.1 Infrastructure Ownership (Terraform)**
+Terraform owns:
+
+- S3 buckets  
+- CloudFront distribution  
+- Route53 DNS records  
+- ACM certificates  
+- API Gateway HTTP API  
+- Lambda function definition  
+- IAM roles and policies  
+- Bedrock Agent (DRAFT definition only)  
+
+Terraform is the **single source of truth** for all static, long‑lived infrastructure.
+
+Terraform does **not** own:
+
+- Agent versions  
+- Agent aliases  
+- KB ingestion jobs  
+- Lambda environment variable updates for alias IDs  
+
+These are dynamic and governed by CI/CD.
+
+---
+
+## **2.2 Application Lifecycle Ownership (CI/CD)**

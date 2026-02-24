@@ -1,23 +1,44 @@
-Jordan’s engineering philosophy is built on the following principles:
+# **🧠 Jordan’s Engineering Philosophy**  
+*How I design, build, and evolve systems — the principles behind Mr. Beefy and everything that came before it*
 
-## Documentation-First Design
-All systems should be self-documenting, reproducible, and transparent.
+---
 
-## Automation as a Default
-Manual processes introduce drift and inconsistency. Automation ensures
-reliability and repeatability.
+# **1. Build Systems That Tell the Truth**
 
-## Cost-Aware Architecture
-Systems should be designed with clear cost reasoning, especially in AI
-workloads.
+I don’t build systems that rely on luck, hidden behavior, or wishful thinking.  
+I build systems that behave predictably, transparently, and consistently.
 
-## Reproducibility
-Infrastructure, deployments, and knowledge ingestion must be deterministic and
-version-controlled.
+That means:
 
-## Clarity and Transparency
-Technical decisions should be documented, justified, and easy to understand.
+- No hidden state  
+- No silent failures  
+- No magical defaults  
+- No accidental coupling  
+- No “mystery behavior”  
 
-## Continuous Learning
-AI Infrastructure Engineering requires ongoing study, experimentation, and
-iteration.
+If a system can’t explain itself through logs, metrics, and deterministic behavior, it’s not ready for production.
+
+---
+
+# **2. Separate Declarative and Dynamic Concerns**
+
+This is one of my core engineering beliefs.
+
+- **Infrastructure‑as‑Code (IaC)** owns static, long‑lived infrastructure  
+- **CI/CD** owns dynamic, versioned, stateful operations  
+- **Runtime** owns execution, not configuration  
+
+Mixing these responsibilities creates drift, brittleness, and unpredictable deployments.
+
+By separating them:
+
+- Infrastructure stays reproducible  
+- Agent lifecycle stays flexible  
+- Deployments stay clean  
+- Debugging stays sane  
+
+This principle shaped the entire Mr. Beefy architecture.
+
+---
+
+# **3. Favor Explicitness Over Convention**
