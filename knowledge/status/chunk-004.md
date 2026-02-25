@@ -45,3 +45,7 @@ And I can do it under pressure, with a full life, and still deliver something in
 That’s the real story of Mr. Beefy.
 
 ---
+
+# **📚 Knowledge Base Ingestion Pipeline (Dedicated Workflow)**
+
+## **Overview**
