@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
     paths:
-      - "backend/**"
+      - "backend/**"   
   workflow_dispatch:
     inputs:
       reason:
@@ -77,8 +77,6 @@ jobs:
         echo "agent_id=$(terraform output -raw agent_id)" >> $GITHUB_OUTPUT
         echo "api_id=$(terraform output -raw api_id)" >> $GITHUB_OUTPUT
 
-
-
     # -----------------------------
     # Write API ID to SSM Parameter Store
     # -----------------------------
@@ -88,6 +86,17 @@ jobs:
           --name "/mrbeefy/api_id" \
           --type "String" \
           --value "${{ steps.tfout.outputs.api_id }}" \
+          --overwrite
+
+    # -----------------------------
+    # Write Knowledge Bucket Name to SSM Parameter Store
+    # -----------------------------
+    - name: Store Knowledge Bucket in SSM
+      run: |
+        aws ssm put-parameter \
+          --name "/mrbeefy/knowledge_bucket" \
+          --type "String" \
+          --value "${{ steps.tfout.outputs.knowledge_bucket }}" \
           --overwrite
 
     # -----------------------------
