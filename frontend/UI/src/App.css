@@ -159,3 +159,14 @@ body {
     .input-row button {
         padding: 0.5rem 1rem;
     }
+
+.chat-input {
+    width: 100%;
+    resize: none;
+    overflow: hidden;
+    padding: 8px;
+    font-size: 1rem;
+    line-height: 1.4;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
