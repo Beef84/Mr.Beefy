@@ -251,3 +251,14 @@ body {
     .input-row button:active {
         background: #3348b8;
     }
+
+.chat-input {
+    width: 100%;
+    resize: none;
+    overflow: hidden;
+    padding: 8px;
+    font-size: 1rem;
+    line-height: 1.4;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
