@@ -11,20 +11,28 @@ Ensures:
 
 ---
 
-# **11. Summary of Design Philosophy**
+# **11. Knowledge Base Lifecycle Design Decisions**
 
-The final architecture reflects a set of deliberate choices:
+## **11.1 Dual‑Path Ingestion Model**
+The system now supports two ingestion paths:
 
-- Keep infrastructure declarative  
-- Keep dynamic state out of Terraform  
-- Keep Lambda thin  
-- Let Bedrock handle intelligence  
-- Let CloudFront handle routing  
-- Let CI/CD handle lifecycle  
-- Keep the API surface minimal  
-- Keep the system secure by default  
-- Keep the architecture simple, scalable, and maintainable  
+1. **Backend Deployment Ingestion**  
+   - Runs automatically during backend deploys  
+   - Ensures the KB is refreshed whenever infrastructure or agent configuration changes  
+   - Acts as a safety net to guarantee consistency after releases  
 
-This design is robust, cost-efficient, and ready for long-term evolution.
+2. **Dedicated KB Ingestion Pipeline**  
+   - Runs independently of backend deploys  
+   - Allows documentation updates to be ingested without requiring a backend rollout  
+   - Provides a safe, isolated ingestion workflow  
+
+This separation reflects the reality that **knowledge evolves faster than infrastructure**.
 
 ---
+
+## **11.2 Why a Separate KB Pipeline Was Introduced**
+Originally, KB ingestion was tied to backend deployments. This created friction:
+
+- Documentation updates required a full backend deploy  
+- KB ingestion failures could block infrastructure releases  
+- Terraform outputs were tightly coupled to ingestion  
