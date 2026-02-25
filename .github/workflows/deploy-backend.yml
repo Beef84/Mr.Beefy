@@ -77,29 +77,7 @@ jobs:
         echo "agent_id=$(terraform output -raw agent_id)" >> $GITHUB_OUTPUT
         echo "api_id=$(terraform output -raw api_id)" >> $GITHUB_OUTPUT
 
-    # -----------------------------
-    # Write KB Metadata File
-    # -----------------------------
-    - name: Checkout Wiki Repo
-      uses: actions/checkout@v4
-      with:
-        repository: ${{ github.repository }}.wiki
-        path: wiki
-        token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Write KB Metadata to Wiki Repo
-      run: |
-        echo "bucket=${{ steps.tfout.outputs.bucket }}" > wiki/kb_metadata.env
-        echo "agent_id=${{ steps.tfout.outputs.agent_id }}" >> wiki/kb_metadata.env
-
-    - name: Commit and Push Metadata to Wiki Repo
-      working-directory: wiki
-      run: |
-        git config user.name "github-actions"
-        git config user.email "github-actions@github.com"
-        git add kb_metadata.env
-        git commit -m "Update KB metadata" || echo "No changes to commit"
-        git push
 
     # -----------------------------
     # Write API ID to SSM Parameter Store

@@ -27,27 +27,7 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
 
-    # -----------------------------
-    # Load KB Metadata
-    # -----------------------------
-    - name: Checkout Wiki Repo
-      uses: actions/checkout@v4
-      with:
-        repository: ${{ github.repository }}.wiki
-        path: wiki
-
-    - name: Load KB Metadata
-      id: meta
-      run: |
-        if [ ! -f wiki/kb_metadata.env ]; then
-          echo "ERROR: wiki/kb_metadata.env not found. Run backend deploy first."
-          exit 1
-        fi
-
-        source wiki/kb_metadata.env
-
-        echo "bucket=$bucket" >> $GITHUB_OUTPUT
-        echo "agent_id=$agent_id" >> $GITHUB_OUTPUT
+    
 
     # -----------------------------
     # Validate Bucket Exists
