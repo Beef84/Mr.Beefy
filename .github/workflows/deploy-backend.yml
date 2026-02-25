@@ -78,17 +78,6 @@ jobs:
         echo "api_id=$(terraform output -raw api_id)" >> $GITHUB_OUTPUT
 
     # -----------------------------
-    # Write Knowledge Bucket Name to SSM Parameter Store
-    # -----------------------------
-    - name: Store Knowledge Bucket in SSM
-      run: |
-        aws ssm put-parameter \
-          --name "/mrbeefy/knowledge_bucket" \
-          --type "String" \
-          --value "${{ steps.tfout.outputs.knowledge_bucket }}" \
-          --overwrite
-
-    # -----------------------------
     # Ensure AWS CLI v2
     # -----------------------------
     - name: Ensure awscli v2
@@ -185,7 +174,17 @@ jobs:
           --function-name mrbeefy-api \
           --environment "Variables={AGENT_ID=${{ steps.tfout.outputs.agent_id }},AGENT_ALIAS_ID=${{ steps.create_or_update_alias.outputs.alias_id }}}"
 
-    
+    # -----------------------------
+    # Write API ID to SSM Parameter Store
+    # -----------------------------
+    - name: Store API ID in SSM
+      run: |
+        aws ssm put-parameter \
+          --name "/mrbeefy/api_id" \
+          --type "String" \
+          --value "${{ steps.tfout.outputs.api_id }}" \
+          --overwrite
+
     # -----------------------------
     # Write Knowledge Bucket Name to SSM Parameter Store
     # -----------------------------
@@ -194,7 +193,7 @@ jobs:
         aws ssm put-parameter \
           --name "/mrbeefy/knowledge_bucket" \
           --type "String" \
-          --value "${{ steps.tfout.outputs.knowledge_bucket }}" \
+          --value "${{ steps.tfout.outputs.bucket}}" \
           --overwrite
 
     # -----------------------------
