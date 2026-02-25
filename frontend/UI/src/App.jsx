@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 import "./App.css";
 
 function App() {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
     const inputRef = useRef(null);
+    const messagesEndRef = useRef(null);   // <-- NEW
     const API_URL = "/chat";
 
     async function sendMessage() {
@@ -46,6 +48,13 @@ function App() {
         }
     }, [input]);
 
+    // Auto-scroll to bottom on new messages
+    useEffect(() => {
+        if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+        }
+    }, [messages]);
+
     return (
         <div className="page">
             <div className="shell">
@@ -75,9 +84,12 @@ function App() {
                                     key={i}
                                     className={`message ${m.role === "user" ? "user" : "assistant"}`}
                                 >
-                                    {m.text}
+                                    <ReactMarkdown>{m.text}</ReactMarkdown>
                                 </div>
                             ))}
+
+                            {/* Auto-scroll anchor */}
+                            <div ref={messagesEndRef} />
                         </div>
 
                         <div className="input-row">
@@ -94,7 +106,7 @@ function App() {
                                         sendMessage();
                                     }
 
-                                    // Shift+Enter → newline
+                                    // Shift+Enter → newline (your original behavior)
                                     if (e.key === "Enter" && e.shiftKey) {
                                         e.preventDefault();
                                         setInput((prev) => prev + "\n");
