@@ -27,15 +27,31 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
 
-    
+    # -----------------------------
+    # Load Knowledge Bucket from SSM
+    # -----------------------------
+    - name: Load Knowledge Bucket
+      id: kb
+      run: |
+        BUCKET=$(aws ssm get-parameter \
+          --name "/mrbeefy/knowledge_bucket" \
+          --query "Parameter.Value" \
+          --output text)
+
+        if [ -z "$BUCKET" ]; then
+          echo "ERROR: Could not load knowledge bucket from SSM."
+          exit 1
+        fi
+
+        echo "bucket=$BUCKET" >> $GITHUB_OUTPUT
 
     # -----------------------------
     # Validate Bucket Exists
     # -----------------------------
     - name: Validate Bucket
       run: |
-        if ! aws s3 ls "s3://${{ steps.meta.outputs.bucket }}" >/dev/null 2>&1; then
-          echo "ERROR: Bucket ${{ steps.meta.outputs.bucket }} does not exist."
+        if ! aws s3 ls "s3://${{ steps.kb.outputs.bucket }}" >/dev/null 2>&1; then
+          echo "ERROR: Bucket ${{ steps.kb.outputs.bucket }} does not exist."
           exit 1
         fi
 
@@ -44,7 +60,7 @@ jobs:
     # -----------------------------
     - name: Upload Knowledge Files
       run: |
-        aws s3 sync knowledge/ s3://${{ steps.meta.outputs.bucket }}/ --delete
+        aws s3 sync knowledge/ s3://${{ steps.kb.outputs.bucket }}/ --delete
 
     # -----------------------------
     # Lookup Knowledge Base ID
@@ -71,18 +87,6 @@ jobs:
       shell: pwsh
       run: |
         ./ingest.ps1 -KbId "${{ steps.lookup.outputs.kb_id }}"
-
-    # -----------------------------
-    # Re-associate KB with Agent (DRAFT)
-    # -----------------------------
-    - name: Associate KB with Agent (DRAFT)
-      working-directory: backend/cli
-      shell: pwsh
-      run: |
-        ./associate_kb.ps1 `
-          -AgentId "${{ steps.meta.outputs.agent_id }}" `
-          -KbId "${{ steps.lookup.outputs.kb_id }}" `
-          -AgentVersion "DRAFT"
 
     # -----------------------------
     # Done
