@@ -89,6 +89,17 @@ jobs:
           --overwrite
 
     # -----------------------------
+    # Write Knowledge Bucket Name to SSM Parameter Store
+    # -----------------------------
+    - name: Store Knowledge Bucket in SSM
+      run: |
+        aws ssm put-parameter \
+          --name "/mrbeefy/knowledge_bucket" \
+          --type "String" \
+          --value "${{ steps.tfout.outputs.knowledge_bucket }}" \
+          --overwrite
+
+    # -----------------------------
     # Ensure AWS CLI v2
     # -----------------------------
     - name: Ensure awscli v2
