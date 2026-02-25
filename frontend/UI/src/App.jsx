@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import "./App.css";
 
 function App() {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
+    const inputRef = useRef(null);
     const API_URL = "/chat";
 
     async function sendMessage() {
@@ -18,14 +19,14 @@ function App() {
             const res = await fetch(API_URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ input: userMessage.text })   // FIXED
+                body: JSON.stringify({ input: userMessage.text })
             });
 
             const data = await res.json();
 
             const agentMessage = {
                 role: "assistant",
-                text: data.reply || "(No response)"                 // FIXED
+                text: data.reply || "(No response)"
             };
 
             setMessages((prev) => [...prev, agentMessage]);
@@ -36,6 +37,14 @@ function App() {
             ]);
         }
     }
+
+    // Auto-resize textarea
+    useEffect(() => {
+        if (inputRef.current) {
+            inputRef.current.style.height = "auto";
+            inputRef.current.style.height = inputRef.current.scrollHeight + "px";
+        }
+    }, [input]);
 
     return (
         <div className="page">
@@ -72,11 +81,26 @@ function App() {
                         </div>
 
                         <div className="input-row">
-                            <input
-                                type="text"
+                            <textarea
+                                ref={inputRef}
+                                className="chat-input"
                                 value={input}
-                                onChange={(e) => setInput(e.target.value)}
                                 placeholder="Ask Mr. Beefy something..."
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                    // Enter without Shift → send
+                                    if (e.key === "Enter" && !e.shiftKey) {
+                                        e.preventDefault();
+                                        sendMessage();
+                                    }
+
+                                    // Shift+Enter → newline
+                                    if (e.key === "Enter" && e.shiftKey) {
+                                        e.preventDefault();
+                                        setInput((prev) => prev + "\n");
+                                    }
+                                }}
+                                rows={1}
                             />
                             <button onClick={sendMessage}>Send</button>
                         </div>
