@@ -185,6 +185,18 @@ jobs:
           --function-name mrbeefy-api \
           --environment "Variables={AGENT_ID=${{ steps.tfout.outputs.agent_id }},AGENT_ALIAS_ID=${{ steps.create_or_update_alias.outputs.alias_id }}}"
 
+    
+    # -----------------------------
+    # Write Knowledge Bucket Name to SSM Parameter Store
+    # -----------------------------
+    - name: Store Knowledge Bucket in SSM
+      run: |
+        aws ssm put-parameter \
+          --name "/mrbeefy/knowledge_bucket" \
+          --type "String" \
+          --value "${{ steps.tfout.outputs.knowledge_bucket }}" \
+          --overwrite
+
     # -----------------------------
     # Write API ID to SSM Parameter Store
     # -----------------------------
